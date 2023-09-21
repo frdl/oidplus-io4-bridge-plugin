@@ -1,0 +1,11 @@
+<?xml version="1.0"?>
+<xs:schema targetNamespace="urn:oid:1.3.6.1.4.1.37553.8.1.8.8.53354196964.24196.1714020422"
+           attributeFormDefault="unqualified"
+           elementFormDefault="qualified"
+           xmlns:xs="http://www.w3.org/2001/XMLSchema">
+<xs:element type="xs:string" name="pki-public" />	
+<xs:element type="xs:string" name="pki-id" />			
+<xs:element type="xs:string" name="pki-private" />			
+<xs:element type="xs:string" name="pki-cert" />				
+<xs:element type="xs:string" name="pki-iss" />				
+<xs:element type="xs:string" name="pki-sub" />		
