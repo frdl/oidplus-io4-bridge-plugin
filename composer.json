@@ -1,6 +1,6 @@
 {
     "name": "frdl/oidplus-io4-bridge-plugin",
-    "type": "oiplus-plugin-adminPages",
+    "type": "oiplus-plugin-ra-pages",
     "description": "Bridge from OIDplus to Webfat/IO4",
     "keywords": ["oiplus", "io4"],
     "license":  ["MIT"],
