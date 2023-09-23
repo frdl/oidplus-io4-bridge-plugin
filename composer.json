@@ -1,10 +1,13 @@
 {
     "name": "frdl/oidplus-io4-bridge-plugin",
-    "type": "oiplus-plugin-admin-pages",
+    "type": "oiplus-plugin",
     "description": "Bridge from OIDplus to Webfat/IO4",
     "keywords": ["oiplus", "io4"],
     "license":  ["MIT"],
     "autoload" : {
         "classmap" : ["OIDplusPagePublicIO4.class.php"]
+    },
+    "extra" : {
+        "installer-name" : "adminPages"
     }
 }
