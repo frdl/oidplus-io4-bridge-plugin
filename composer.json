@@ -8,6 +8,6 @@
         "classmap" : ["OIDplusPagePublicIO4.class.php"]
     },
     "extra" : {
-        "installer-name" : "adminPages"
+        "installer-name" : "io4"
     }
 }
