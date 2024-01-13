@@ -305,20 +305,24 @@ class OIDplusPagePublicIO4 extends OIDplusPagePluginAdmin //OIDplusPagePluginPub
 	}
 				   
 	public function getWebfat(bool $load = false, bool $serveRequest = false) {
-	 
-	 if(null === $this->StubRunner){
-		$webfatFile =OIDplus::localpath().'webfat.php';
+
+	     if(null === $this->StubRunner){
+		$webfatFile =OIDplus::localpath().$this->getWebfatFile();
 		 require_once __DIR__.\DIRECTORY_SEPARATOR.'autoloader.php';
 		$this->StubRunner = (new \IO4\Webfat)->getWebfat($webfatFile, $load, $serveRequest);
-
-	 }
+	    }
 		
 		return $this->StubRunner;
 	} 
 				   
-				   
+	public function getWebfatFile() {	 
+	     $webfatFile =OIDplus::localpath().'webfan.setup.php';		
+	     return $webfatFile;
+	} 				   
 
-				   
+	public function getWebfatSetupLink(){
+           return OIDplus::webpath(dirname($this->getWebfatFile()),false).basename($this->getWebfatFile());
+	}
 				   
 				   
 	public function loadWebApp(StubHelperInterface | WebAppInterface | StubRunnerInterface $payload,
@@ -672,15 +676,13 @@ try {
 	
 	
 	public function getNotifications(string $user=null): array {
-		$notifications = array();
-//'.OIDplus::gui()->link($row['id']).'
+		$notifications = array(); 
 		$notifications[] = 
-			new OIDplusNotification('INFO', _L('Running <a href="%1">%2</a>', 
-											  // '<a href="https://registry.frdl.de/?goto=oid%3A1.3.6.1.4.1.37553.8.1.8.8.53354196964">'
-											     //.htmlentities($row['id'])
-											  // '<a href="%1">%2</a>', 
+			new OIDplusNotification('INFO', _L('Running <a href="%1">%2</a><br /><a href="%3">Webfan Webfat Setup (%4)</a>', 
 											   OIDplus::gui()->link('oid:1.3.6.1.4.1.37476.9000.108.19361.24196'),
-											  htmlentities( 'OIDplus IO4 Bridge-Plugin' )
+											  htmlentities( 'OIDplus IO4 Bridge-Plugin' ),
+							                                  $this->getWebfatSetupLink(),
+							                                 $user
 											  )
 								   );
 		return $notifications;
