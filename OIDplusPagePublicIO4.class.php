@@ -290,14 +290,54 @@ class OIDplusPagePublicIO4 extends OIDplusPagePluginAdmin //OIDplusPagePluginPub
 		$id = $parts[0];
 		$ra_email = $parts[1] ?? null/*no filter*/;
 
-		if ($id == 'io4:bridge') {
+		if ($id == 'webfan:io4:bridge') {
 			$handled = true;
 
 			$out['title'] = _L('IO4 Bridge');
 		
+		}elseif ($id == 'webfan:webfat:setup') {
+			$handled = true;
+          //  header('Location: '.$this->getWebfatSetupLink());
+			//die('<meta http-equiv="refresh" content="0; url='.$this->getWebfatSetupLink().'">');
+             $out['text'] .= '<meta http-equiv="refresh" content="0; url='.$this->getWebfatSetupLink().'">'
+				   .'<a href="'.$this->getWebfatSetupLink().'">'.$this->getWebfatSetupLink().'</a>';
 		}
 	}				   
- 
+
+
+	/**
+	 * @param array $json
+	 * @param string|null $ra_email
+	 * @param bool $nonjs
+	 * @param string $req_goto
+	 * @return bool
+	 * @throws OIDplusException
+	 */
+	public function tree(array &$json, string $ra_email=null, bool $nonjs=false, string $req_goto=''): bool {
+		if (!OIDplus::authUtils()->isAdminLoggedIn()) return false;
+
+		if (file_exists(__DIR__.'/img/main_icon16.png')) {
+			$tree_icon = OIDplus::webpath(__DIR__,OIDplus::PATH_RELATIVE).'img/main_icon16.png';
+		} else {
+			$tree_icon = null; // default icon (folder)
+		}
+
+		$json[] = array(
+			'id' => 'webfan:webfat:setup',
+			//'icon' => $tree_icon,
+			'text' => _L('Webfan Webfat Setup'),
+			//'href'=>$this->getWebfatSetupLink(),
+		);
+
+		$json[] = array(
+			'id' => 'webfan:io4:bridge',
+			//'icon' => $tree_icon,
+			'text' => _L('Webfan IO4 Bridge'),
+			//'href'=>$this->getWebfatSetupLink(),
+		);
+
+		return true;
+	}
 
 	public function init($html = true) {
        //  $app = $this->getApp();
@@ -307,7 +347,7 @@ class OIDplusPagePublicIO4 extends OIDplusPagePluginAdmin //OIDplusPagePluginPub
 	public function getWebfat(bool $load = false, bool $serveRequest = false) {
 
 	     if(null === $this->StubRunner){
-		$webfatFile =OIDplus::localpath().$this->getWebfatFile();
+		$webfatFile =$this->getWebfatFile();
 		 require_once __DIR__.\DIRECTORY_SEPARATOR.'autoloader.php';
 		$this->StubRunner = (new \IO4\Webfat)->getWebfat($webfatFile, $load, $serveRequest);
 	    }
@@ -321,7 +361,7 @@ class OIDplusPagePublicIO4 extends OIDplusPagePluginAdmin //OIDplusPagePluginPub
 	} 				   
 
 	public function getWebfatSetupLink(){
-           return OIDplus::webpath(dirname($this->getWebfatFile()),false).basename($this->getWebfatFile());
+           return OIDplus::webpath(dirname($this->getWebfatFile()),true).basename($this->getWebfatFile());
 	}
 				   
 				   
@@ -786,7 +826,7 @@ try {
 																	   'https://api.webfan.de/registry/api/meta/schema/%1s'
 																	 );
  
-		 $url = sprintf($apiUrltemplateGetSchema, urlencode(\WeidOidConverter::oid2weid($id)));
+		 $url = sprintf($apiUrltemplateGetSchema, urlencode(\Frdl\Weid\WeidOidConverter::oid2weid($id)));
 			 
 			 
 		$httpResult = $this->getWebfat(true,false)->getRemoteAutoloader()->transport($url, 'GET');
