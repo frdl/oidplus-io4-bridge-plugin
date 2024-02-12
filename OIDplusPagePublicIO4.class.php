@@ -30,6 +30,7 @@ use ViaThinkSoft\OIDplus\OIDplusPagePluginAdmin;
 use ViaThinkSoft\OIDplus\OIDplusGui;
 use ViaThinkSoft\OIDplus\OIDplusPagePublicAttachments;
 
+use ViaThinkSoft\OIDplus\OIDplusPlugin;
 
 use Webfan\DescriptorType;
 use Webfan\RuntimeInterface;
@@ -109,7 +110,10 @@ use Monolog\Logger as MonoLogger;
 
  
 
-
+/*
+API:
+public function packagist(string $method, array $params = [])
+*/
 class OIDplusPagePublicIO4 extends OIDplusPagePluginAdmin //OIDplusPagePluginPublic // implements RequestHandlerInterface
 	implements  //INTF_OID_1_3_6_1_4_1_37476_2_5_2_3_1, /* oobeEntry, oobeRequested */
 	           \ViaThinkSoft\OIDplus\INTF_OID_1_3_6_1_4_1_37476_2_5_2_3_4,  //Ra+Whois Attributes
@@ -120,25 +124,669 @@ class OIDplusPagePublicIO4 extends OIDplusPagePluginAdmin //OIDplusPagePluginPub
 				   /*   \ViaThinkSoft\OIDplus\INTF_OID_1_3_6_1_4_1_37476_2_5_2_3_7 getAlternativesForQuery() */
 {
 
+	const PAGE_ID_COMPOSER = 'oidplus:io4:composer';	
+	const PAGE_ID_WEBFAT = 'webfan:webfat:setup';	
+	const PAGE_ID_BRIDGE = 'webfan:io4:bridge';		   
+	const PAGES = [
+		    'webfan:io4:bridge' => 'gui_PAGE_ID_BRIDGE',
+		    'webfan:webfat:setup' => 'gui_PAGE_ID_WEBFAT',
+		    'oidplus:io4:composer' => 'gui_PAGE_ID_COMPOSER',
+		
+		];
+		/* 
+		[ 
+				"oiplus-plugin-public-pages",
+				"oiplus-plugin-ra-pages",
+				"oiplus-plugin-admin-pages",
+				"oiplus-plugin-auth",
+				"oiplus-plugin-database",
+				"oiplus-plugin-sql-slang",
+				"oiplus-plugin-logger",
+				"oiplus-plugin-object-types",
+				"oiplus-plugin-language",
+				"oiplus-plugin-design",
+				"oiplus-plugin-captcha"
+			"project",
+			"library"
+		],
+		*/				   
    	protected $AppLauncher = null;		
     protected $_containerDeclared = false;		
 	protected $StubRunner = null;		
 	
 	
 	protected $schemaCacheDir;
+	protected $schemaCacheExpires;
+				   
+	protected $packagistCacheDir;
+	protected $packagistExpires;
+				   
+	protected $packagistClient = null;
 
 	/**
 	 * @var int
 	 */
-	protected $schemaCacheExpires;
 	public function __construct() { 
+		$this->packagistCacheDir = OIDplus::baseConfig()->getValue('IO4_PACKAGIST_CACHE_DIRECTORY', OIDplus::localpath().'userdata/cache/' );
+		$this->packagistExpires = OIDplus::baseConfig()->getValue('IO4_PACKAGIST_CACHE_EXPIRES', 15 * 60 );
+		
 		$this->schemaCacheDir = OIDplus::baseConfig()->getValue('SCHEMA_CACHE_DIRECTORY', OIDplus::localpath().'userdata/cache/' );
-		$this->schemaCacheExpires = OIDplus::baseConfig()->getValue('SCHEMA_CACHE_EXPIRES', 60 * 60 );
+		$this->schemaCacheExpires = OIDplus::baseConfig()->getValue('SCHEMA_CACHE_EXPIRES', 60 * 60 );		
 	}				   
 
+	protected function cc(){
+	  if(null === $this->packagistClient){
+	    if(!class_exists(\Packagist\Api\Client::class, true)){
+		   $this->getWebfat(true, false);	
+		}
+		$this->packagistClient = new \Packagist\Api\Client();
+	  }
+		return $this->packagistClient;
+	}
+				   
+	public function getNotifications(string $user=null): array {
+		$notifications = array(); 
+		$notifications[] = 
+			new OIDplusNotification('INFO', _L('Running <a href="%1">%2</a><br /><a href="%3">Webfan Webfat Setup (%4)</a>', 
+											   OIDplus::gui()->link('oid:1.3.6.1.4.1.37476.9000.108.19361.24196'),
+											  htmlentities( 'OIDplus IO4 Bridge-Plugin' ),
+							                                  $this->getWebfatSetupLink(),
+							                                 $user
+											  )
+								   );
+		return $notifications;
+	}			
+
+				   
+   protected function p_head(){
+	   return '
+	   <thead>
+	     <tr><td><strong>Package</strong></td>
+		   <td><strong>Description</strong></td>
+		   <td><strong>Status</strong></td>
+		   <td><strong>Setup</strong></td>
+		 </tr>
+		</thead> 
+	   ';
+   }
+   protected function p_row($name, $repository, $description, $status, $form){
+	  return sprintf(
+    '
+	     <tr>
+		   <td><a href="%s" target="_blank">%s</a></td>
+		   <td>%s</td>
+		   <td>%s</td>
+		   <td>%s</td>
+		 </tr>
+	   ',
+         $repository,
+         $name,
+         $description,
+		   '',
+		   ''
+        );
+   }
+
+				   
+	public function package(string $name){
+			     $cacheFile = $this->packagist_cache_file(['method'=>__METHOD__, 'params' => [$name]]);
+		         $out = $this->packagist_read_cache($cacheFile);
+			     if(!$out){
+					//$out =  $this->cc()->all(['type' => 'oiplus-plugin-object-types']);
+					$p = \call_user_func_array([$this->cc(), 'get'], [$name]);
+					$r = new \ReflectionObject($p); 
+				    $methods = $r->getMethods();
+					$out = [];
+					foreach($methods as $m){
+						if(count($m->getParameters()) > 0)continue;
+						$n = $m->getName();
+						$n=str_replace(['get', 'set', 'is'], ['','',''], $n);
+						$n=strtolower($n);
+						$out[$n] = \call_user_func([$p, $m->getName()]);
+					}
+					$this->packagist_write_cache($out, $cacheFile); 
+				 }
+			      return (array)$out; 
+	}				   
+				   
+ 
 				   
 				   
-	
+				   
+	public function packagist(string $method, array $params = []){
+			     $cacheFile = $this->packagist_cache_file(['method'=>$method, 'params' => $params]);
+			     $out = $this->packagist_read_cache($cacheFile);
+			     if(!$out){
+					//$out =  $this->cc()->all(['type' => 'oiplus-plugin-object-types']);
+					$out = \call_user_func_array([$this->cc(), $method], $params);
+					$this->packagist_write_cache($out, $cacheFile); 
+				 }
+			      return $out; 
+	}				   
+				   
+	protected function packagist_write_cache($out, string $cacheFile){
+		 file_put_contents($cacheFile, false===$out ? json_encode(false) : json_encode($out));
+	}
+	protected function packagist_cache_file($query){
+		  $query = print_r($query, true);
+			$cacheFile = $this->packagistCacheDir. 'packagist_'
+			.sha1(\get_current_user()
+				  .  filemtime(__FILE__).'-'.$query.'sfgf'
+				  .OIDplus::authUtils()->makeSecret(['cee75760-f4f8-11ed-b67e-3c4a92df8582'])
+				 )
+			.'.'
+			.strlen( $query )
+			.'.json'
+			;
+		return $cacheFile;
+	}				   
+	protected function packagist_read_cache(string $cacheFile){
+		if (file_exists($cacheFile) && filemtime($cacheFile) >= time() - $this->packagistExpires) {
+			$out = json_decode(file_get_contents($cacheFile));
+			if(is_object($out) || is_bool($out)){
+				return $out;
+			}
+		}
+		return false;
+	}					   
+				   
+				   
+   public function gui_PAGE_ID_COMPOSER(string $id, array $out) {
+	   $href_example_composer = OIDplus::webpath(__DIR__,OIDplus::PATH_RELATIVE).'~composer.core.2.0.txt';
+	   
+		if ($id == self::PAGE_ID_COMPOSER && OIDplus::authUtils()->isAdminLoggedIn()) {
+		     
+             $out['title'] = _L('Composer Plugins');
+             $out['text'] .= '' 
+				   .'Please take a look at the <a href="'.$href_example_composer.'" target="_blank">root composer.json example</a> to find out how the OIDplus composer plugin manager can be enabled. You MUST include the <b><i>trusted and allowed plugins sections</i></b> as in the example and you MUST require the package <b><i>frdl/oidplus-composer-plugin</i></b>! All composer-plugins (like the frdl/oidplus-composer-plugin, NOT the OIDplus-plugins-packages) MUST be listed <b>first</b> (after the php requirement) in the requirements section of the composer.json file, per composer spec.!';
+			
+			/* 
+		[ 
+				"oiplus-plugin-public-pages",
+				"oiplus-plugin-ra-pages",
+				"oiplus-plugin-admin-pages",
+				"oiplus-plugin-auth",
+				"oiplus-plugin-database",
+				"oiplus-plugin-sql-slang",
+				"oiplus-plugin-logger",
+				"oiplus-plugin-object-types",
+				"oiplus-plugin-language",
+				"oiplus-plugin-design",
+				"oiplus-plugin-captcha"
+			"project",
+			"library"
+		],
+		*/				
+			$pp_public = array();
+			$pp_ra = array();
+			$pp_admin = array();
+
+			foreach (OIDplus::getPagePlugins() as $plugin) {
+				if (is_subclass_of($plugin, OIDplusPagePluginPublic::class)) {
+					$pp_public[] = $plugin;
+				}
+				if (is_subclass_of($plugin, OIDplusPagePluginRa::class)) {
+					$pp_ra[] = $plugin;
+				}
+				if (is_subclass_of($plugin, OIDplusPagePluginAdmin::class)) {
+					$pp_admin[] = $plugin;
+				}
+			}	
+			
+			
+					$out['text'] .= '<h2>'._L('Public page plugins').'</h2>';
+					$out['text'] .= '<div class="container box"><div id="suboid_table" class="table-responsive">';
+			
+			
+						
+			   $packs = $this->packagist('all', [
+					  ['type' => 'oiplus-plugin-public-pages'],
+				  ]);
+			 
+			
+			    $out['text'] .= '<table>';
+			    $out['text'] .= $this->p_head();
+			    $out['text'] .= '<tbody>';
+			    foreach($packs as $pname){ 
+				  	  $package = $this->package($pname);
+					  extract($package);
+					  $out['text'] .= $this->p_row($name, $repository, $description, '', '');
+				}
+			   $out['text'] .= '</tbody>';
+			    $out['text'] .= '</table>';
+			
+			
+      //    if ($show_pages_public) {
+				if (count($plugins = $pp_public) > 0) {
+					$out['text'] .= '<table class="table table-bordered table-striped">';
+					$out['text'] .= '<thead>';
+					$this->pluginTableHead($out);
+					$out['text'] .= '</thead>';
+					$out['text'] .= '<tbody>';
+					foreach ($plugins as $plugin) {
+						$this->pluginTableLine($out, $plugin);
+					}
+					$out['text'] .= '</tbody>';
+					$out['text'] .= '</table>';
+				}
+					$out['text'] .= '</div></div>';
+		 //	}
+
+					$out['text'] .= '<h2>'._L('RA page plugins').'</h2>';
+					$out['text'] .= '<div class="container box"><div id="suboid_table" class="table-responsive">';
+						
+			$packs = $this->packagist('all', [
+					  ['type' => 'oiplus-plugin-ra-pages'],
+				  ]);
+			 
+			
+			    $out['text'] .= '<table>';
+			    $out['text'] .= $this->p_head();
+			    $out['text'] .= '<tbody>';
+			    foreach($packs as $pname){ 
+				  	  $package = $this->package($pname);
+					  extract($package);
+					  $out['text'] .= $this->p_row($name, $repository, $description, '', '');
+				}
+			   $out['text'] .= '</tbody>';
+			    $out['text'] .= '</table>';
+			
+		 //	if ($show_pages_ra) {
+				if (count($plugins = $pp_ra) > 0) {
+					$out['text'] .= '<table class="table table-bordered table-striped">';
+					$out['text'] .= '<thead>';
+					$this->pluginTableHead($out);
+					$out['text'] .= '</thead>';
+					$out['text'] .= '<tbody>';
+					foreach ($plugins as $plugin) {
+						$this->pluginTableLine($out, $plugin);
+					}
+					$out['text'] .= '</tbody>';
+					$out['text'] .= '</table>';
+				}
+					$out['text'] .= '</div></div>';
+			 //}
+
+					$out['text'] .= '<h2>'._L('Admin page plugins').'</h2>';
+					$out['text'] .= '<div class="container box"><div id="suboid_table" class="table-responsive">';
+			
+			$packs = $this->packagist('all', [
+					  ['type' => 'oiplus-plugin-admin-pages'],
+				  ]);
+			 
+			
+			    $out['text'] .= '<table>';
+			    $out['text'] .= $this->p_head();
+			    $out['text'] .= '<tbody>';
+			    foreach($packs as $pname){ 
+				  	  $package = $this->package($pname);
+					  extract($package);
+					  $out['text'] .= $this->p_row($name, $repository, $description, '', '');
+				}
+			   $out['text'] .= '</tbody>';
+			    $out['text'] .= '</table>';
+			 //if ($show_pages_admin) {
+				if (count($plugins = $pp_admin) > 0) {
+					$out['text'] .= '<table class="table table-bordered table-striped">';
+					$out['text'] .= '<thead>';
+					$this->pluginTableHead($out);
+					$out['text'] .= '</thead>';
+					$out['text'] .= '<tbody>';
+					foreach ($plugins as $plugin) {
+						$this->pluginTableLine($out, $plugin);
+					}
+					$out['text'] .= '</tbody>';
+					$out['text'] .= '</table>';
+				}
+					$out['text'] .= '</div></div>';
+		 //	}
+
+			 //if ($show_obj_active || $show_obj_inactive) {
+				$enabled = true ? OIDplus::getObjectTypePluginsEnabled() : array();
+				$disabled = true ? OIDplus::getObjectTypePluginsDisabled() : array();
+					$out['text'] .= '<h2>'._L('Object types').'</h2>';
+					$out['text'] .= '<div class="container box"><div id="suboid_table" class="table-responsive">';
+			
+		 
+			      $packs = $this->packagist('all', [
+					  ['type' => 'oiplus-plugin-object-types'],
+				  ]);
+			 
+			
+			    $out['text'] .= '<table>';
+			    $out['text'] .= $this->p_head();
+			    $out['text'] .= '<tbody>';
+			    foreach($packs as $pname){ 
+				  	  $package = $this->package($pname);
+					  extract($package);
+					  $out['text'] .= $this->p_row($name, $repository, $description, '', '');
+				}
+			   $out['text'] .= '</tbody>';
+			    $out['text'] .= '</table>';
+			
+				if (count($plugins = array_merge($enabled, $disabled)) > 0) {
+					$out['text'] .= '<table class="table table-bordered table-striped">';
+					$out['text'] .= '<thead>';
+					$this->pluginTableHead($out);
+					$out['text'] .= '</thead>';
+					$out['text'] .= '<tbody>';
+					foreach ($plugins as $plugin) {
+						if (in_array($plugin, $enabled)) {
+							$this->pluginTableLine($out, $plugin, 0);
+						} else {
+							$this->pluginTableLine($out, $plugin, 2, _L('disabled'));
+						}
+					}
+					$out['text'] .= '</tbody>';
+					$out['text'] .= '</table>';
+				}
+					$out['text'] .= '</div></div>';
+			 //}
+			
+			
+			
+			
+
+					$out['text'] .= '<h2>'._L('Database providers').'</h2>';
+					$out['text'] .= '<div class="container box"><div id="suboid_table" class="table-responsive">';
+			
+			$packs = $this->packagist('all', [
+					  ['type' => 'oiplus-plugin-database'],
+				  ]);
+			 
+			
+			    $out['text'] .= '<table>';
+			    $out['text'] .= $this->p_head();
+			    $out['text'] .= '<tbody>';
+			    foreach($packs as $pname){ 
+				  	  $package = $this->package($pname);
+					  extract($package);
+					  $out['text'] .= $this->p_row($name, $repository, $description, '', '');
+				}
+			   $out['text'] .= '</tbody>';
+			    $out['text'] .= '</table>';
+		 //	if ($show_db_active || $show_db_inactive) {
+				if (count($plugins = OIDplus::getDatabasePlugins()) > 0) {
+					$out['text'] .= '<table class="table table-bordered table-striped">';
+					$out['text'] .= '<thead>';
+					$this->pluginTableHead($out);
+					$out['text'] .= '</thead>';
+					$out['text'] .= '<tbody>';
+					foreach ($plugins as $plugin) {
+						$active = $plugin->isActive();
+						//if ($active && !$show_db_active) continue;
+						//if (!$active && !$show_db_inactive) continue;
+						$this->pluginTableLine($out, $plugin, $active?1:0, $active?_L('active'):'');
+					}
+					$out['text'] .= '</tbody>';
+					$out['text'] .= '</table>';
+				}
+					$out['text'] .= '</div></div>';
+		 //	}
+
+					$out['text'] .= '<h2>'._L('SQL slang plugins').'</h2>';
+					$out['text'] .= '<div class="container box"><div id="suboid_table" class="table-responsive">';
+			$packs = $this->packagist('all', [
+					  ['type' => 'oiplus-plugin-sql-slang'],
+				  ]);
+			 
+			
+			    $out['text'] .= '<table>';
+			    $out['text'] .= $this->p_head();
+			    $out['text'] .= '<tbody>';
+			    foreach($packs as $pname){ 
+				  	  $package = $this->package($pname);
+					  extract($package);
+					  $out['text'] .= $this->p_row($name, $repository, $description, '', '');
+				}
+			   $out['text'] .= '</tbody>';
+			    $out['text'] .= '</table>';			
+			
+			 //if ($show_sql_active || $show_sql_inactive) {
+				if (count($plugins = OIDplus::getSqlSlangPlugins()) > 0) {
+					$out['text'] .= '<table class="table table-bordered table-striped">';
+					$out['text'] .= '<thead>';
+					$this->pluginTableHead($out);
+					$out['text'] .= '</thead>';
+					$out['text'] .= '<tbody>';
+					foreach ($plugins as $plugin) {
+						$active = $plugin->isActive();
+						//if ($active && !$show_sql_active) continue;
+						//if (!$active && !$show_sql_inactive) continue;
+						$this->pluginTableLine($out, $plugin, $active?1:0, $active?_L('active'):'');
+					}
+					$out['text'] .= '</tbody>';
+					$out['text'] .= '</table>';
+				}
+					$out['text'] .= '</div></div>';
+			 //}
+
+					$out['text'] .= '<h2>'._L('RA authentication providers').'</h2>';
+					$out['text'] .= '<div class="container box"><div id="suboid_table" class="table-responsive">';
+			
+			$packs = $this->packagist('all', [
+					  ['type' => 'oiplus-plugin-auth'],
+				  ]);
+			 
+			
+			    $out['text'] .= '<table>';
+			    $out['text'] .= $this->p_head();
+			    $out['text'] .= '<tbody>';
+			    foreach($packs as $pname){ 
+				  	  $package = $this->package($pname);
+					  extract($package);
+					  $out['text'] .= $this->p_row($name, $repository, $description, '', '');
+				}
+			   $out['text'] .= '</tbody>';
+			    $out['text'] .= '</table>';					
+			 //if ($show_auth) {
+				if (count($plugins = OIDplus::getAuthPlugins()) > 0) {
+					$out['text'] .= '<table class="table table-bordered table-striped">';
+					$out['text'] .= '<thead>';
+					$this->pluginTableHead($out);
+					$out['text'] .= '</thead>';
+					$out['text'] .= '<tbody>';
+					foreach ($plugins as $plugin) {
+						$default = OIDplus::getDefaultRaAuthPlugin(true)->getManifest()->getOid() === $plugin->getManifest()->getOid();
+
+						$reason_hash = '';
+						$can_hash = $plugin->availableForHash($reason_hash);
+
+						$reason_verify = '';
+						$can_verify = $plugin->availableForHash($reason_verify);
+
+						if ($can_hash && !$can_verify) {
+							$note = _L('Only hashing, no verification');
+							if (!empty($reason_verify)) $note .= '. '.$reason_verify;
+							$modifier = $default ? 1 : 0;
+						}
+						else if (!$can_hash && $can_verify) {
+							$note = _L('Only verification, no hashing');
+							if (!empty($reason_hash)) $note .= '. '.$reason_hash;
+							$modifier = $default ? 1 : 0;
+						}
+						else if (!$can_hash && !$can_verify) {
+							$note = _L('Not available on this system');
+							$app1 = '';
+							$app2 = '';
+							if (!empty($reason_verify)) $app1 = $reason_verify;
+							if (!empty($reason_hash)) $app2 = $reason_hash;
+							if ($app1 != $app2) {
+								$note .= '. '.$app1.'. '.$app2;
+							} else {
+								$note .= '. '.$app1;
+							}
+							$modifier = 2;
+						}
+						else /*if ($can_hash && $can_verify)*/ {
+							$modifier = $default ? 1 : 0;
+							$note = '';
+						}
+
+						$this->pluginTableLine($out, $plugin, $modifier, $note);
+					}
+					$out['text'] .= '</tbody>';
+					$out['text'] .= '</table>';
+				}
+					$out['text'] .= '</div></div>';
+		 //	}
+
+					$out['text'] .= '<h2>'._L('Logger plugins').'</h2>';
+					$out['text'] .= '<div class="container box"><div id="suboid_table" class="table-responsive">';
+			$packs = $this->packagist('all', [
+					  ['type' => 'oiplus-plugin-logger'],
+				  ]);
+			 
+			
+			    $out['text'] .= '<table>';
+			    $out['text'] .= $this->p_head();
+			    $out['text'] .= '<tbody>';
+			    foreach($packs as $pname){ 
+				  	  $package = $this->package($pname);
+					  extract($package);
+					  $out['text'] .= $this->p_row($name, $repository, $description, '', '');
+				}
+			   $out['text'] .= '</tbody>';
+			    $out['text'] .= '</table>';					
+			
+		 //	if ($show_logger) {
+				if (count($plugins = OIDplus::getLoggerPlugins()) > 0) {
+					$out['text'] .= '<table class="table table-bordered table-striped">';
+					$out['text'] .= '<thead>';
+					$this->pluginTableHead($out);
+					$out['text'] .= '</thead>';
+					$out['text'] .= '<tbody>';
+					foreach ($plugins as $plugin) {
+						$reason = '';
+						if ($plugin->available($reason)) {
+							$this->pluginTableLine($out, $plugin, 0);
+						} else if ($reason) {
+							$this->pluginTableLine($out, $plugin, 2, _L('not available: %1',$reason));
+						} else {
+							$this->pluginTableLine($out, $plugin, 2, _L('not available'));
+						}
+					}
+					$out['text'] .= '</tbody>';
+					$out['text'] .= '</table>';
+				}
+					$out['text'] .= '</div></div>';
+			 //}
+
+					$out['text'] .= '<h2>'._L('Languages').'</h2>';
+					$out['text'] .= '<div class="container box"><div id="suboid_table" class="table-responsive">';
+			$packs = $this->packagist('all', [
+					  ['type' => 'oiplus-plugin-language'],
+				  ]);
+			 
+			
+			    $out['text'] .= '<table>';
+			    $out['text'] .= $this->p_head();
+			    $out['text'] .= '<tbody>';
+			    foreach($packs as $pname){ 
+				  	  $package = $this->package($pname);
+					  extract($package);
+					  $out['text'] .= $this->p_row($name, $repository, $description, '', '');
+				}
+			   $out['text'] .= '</tbody>';
+			    $out['text'] .= '</table>';					
+			
+		 //	if ($show_language) {
+				if (count($plugins = OIDplus::getLanguagePlugins()) > 0) {
+					$out['text'] .= '<table class="table table-bordered table-striped">';
+					$out['text'] .= '<thead>';
+					$this->pluginTableHead($out);
+					$out['text'] .= '</thead>';
+					$out['text'] .= '<tbody>';
+					foreach ($plugins as $plugin) {
+						$default = OIDplus::getDefaultLang() === $plugin->getLanguageCode();
+						$this->pluginTableLine($out, $plugin, $default?1:0, $default?_L('default'):'');
+					}
+					$out['text'] .= '</tbody>';
+					$out['text'] .= '</table>';
+				}
+					$out['text'] .= '</div></div>';
+		 //	}
+
+					$out['text'] .= '<h2>'._L('Designs').'</h2>';
+					$out['text'] .= '<div class="container box"><div id="suboid_table" class="table-responsive">';
+			$packs = $this->packagist('all', [
+					  ['type' => 'oiplus-plugin-design'],
+				  ]);
+			 
+			
+			    $out['text'] .= '<table>';
+			    $out['text'] .= $this->p_head();
+			    $out['text'] .= '<tbody>';
+			    foreach($packs as $pname){ 
+				  	  $package = $this->package($pname);
+					  extract($package);
+					  $out['text'] .= $this->p_row($name, $repository, $description, '', '');
+				}
+			   $out['text'] .= '</tbody>';
+			    $out['text'] .= '</table>';				
+			 //if ($show_design_active || $show_design_inactive) {
+				if (count($plugins = OIDplus::getDesignPlugins()) > 0) {
+					$out['text'] .= '<table class="table table-bordered table-striped">';
+					$out['text'] .= '<thead>';
+					$this->pluginTableHead($out);
+					$out['text'] .= '</thead>';
+					$out['text'] .= '<tbody>';
+					foreach ($plugins as $plugin) {
+						$active = $plugin->isActive();
+						//if ($active && !$show_design_active) continue;
+						//if (!$active && !$show_design_inactive) continue;
+						$this->pluginTableLine($out, $plugin, $active?1:0, $active?_L('active'):'');
+					}
+					$out['text'] .= '</tbody>';
+					$out['text'] .= '</table>';
+				}
+					$out['text'] .= '</div></div>';
+			 //}
+ //
+			 //if ($show_captcha_active || $show_captcha_inactive) {
+					$out['text'] .= '<h2>'._L('CAPTCHA plugins').'</h2>';
+					$out['text'] .= '<div class="container box"><div id="suboid_table" class="table-responsive">';
+			$packs = $this->packagist('all', [
+					  ['type' => 'oiplus-plugin-captcha'],
+				  ]);
+			 
+			
+			    $out['text'] .= '<table>';
+			    $out['text'] .= $this->p_head();
+			    $out['text'] .= '<tbody>';
+			    foreach($packs as $pname){ 
+				  	  $package = $this->package($pname);
+					  extract($package);
+					  $out['text'] .= $this->p_row($name, $repository, $description, '', '');
+				}
+			   $out['text'] .= '</tbody>';
+			    $out['text'] .= '</table>';				
+				if (count($plugins = OIDplus::getCaptchaPlugins()) > 0) {
+					$out['text'] .= '<table class="table table-bordered table-striped">';
+					$out['text'] .= '<thead>';
+					$this->pluginTableHead($out);
+					$out['text'] .= '</thead>';
+					$out['text'] .= '<tbody>';
+					foreach ($plugins as $plugin) {
+						$active = $plugin->isActive();
+						//if ($active && !$show_captcha_active) continue;
+						//if (!$active && !$show_captcha_inactive) continue;
+						$this->pluginTableLine($out, $plugin, $active?1:0, $active?_L('active'):'');
+					}
+					$out['text'] .= '</tbody>';
+					$out['text'] .= '</table>';
+				}
+					$out['text'] .= '</div></div>';
+			 //}
+		 			
+			
+		}
+	   return $out;
+   }				   
+				   
+				   
+				   
+				   
 	public function modifyContent($id, &$title, &$icon, &$text) {
 		$content = '';
 		$CRUD = '';
@@ -190,120 +838,54 @@ class OIDplusPagePublicIO4 extends OIDplusPagePluginAdmin //OIDplusPagePluginPub
 		$this->modifyContent_log( $id, $title, $icon, $text);
 	}
 	
-	
-
-
-	public function restApiCall(string $requestMethod, string $endpoint, array $json_in) {
-		 
-		if (str_starts_with($endpoint, 'io4/')) {
-			$id = substr($endpoint, strlen('io4/'));
-			$obj = OIDplusObject::findFitting($id);
-				
-			if (!$obj) {
-				$obj = OIDplusObject::parse($id);
-			}
-			/*	*/
-				
-	    	if (!$obj) {
-              http_response_code(404);
-           //   throw new OIDplusException(_L('REST endpoint not found'), null, 404);
-           		OIDplus::invoke_shutdown();
-		    	@header('Content-Type:application/json; charset=utf-8');
-			    echo json_encode([
-			      'code'=>404,
-			      'message'=>'Not found',
-			      'endpoint'=>$endpoint,
-			      'method'=>$requestMethod,
-			      'payload'=>$json_in,
-			    ]);
-			    die(); // return true;
-			}
-			
-			if('GET' === $requestMethod){
-				 if (!$obj->userHasReadRights() && $obj->isConfidental()){    		
-    		        throw new OIDplusException('Insufficient authorization to read information about this object.', null, 401);
-		         }	
-		         
-	              http_response_code(200);
-           //   throw new OIDplusException(_L('REST endpoint not found'), null, 404);
-           		OIDplus::invoke_shutdown();
-		    	@header('Content-Type:application/json; charset=utf-8');
-			    echo json_encode([
-			      'code'=>200,
-			      'message'=>'Allocation Information Data',
-			      'endpoint'=>$endpoint,
-			      'method'=>$requestMethod,
-			      'object'=>(array)$obj,
-			      'alloc'=>[],
-			    ]);
-			    die(); // return true;	         
-		         
-		         
-			}elseif('DELETE' === $requestMethod){
-				if (!$obj->userHasParentalWriteRights()){
-		         throw new OIDplusException(_L('Authentication error. Please log in as the superior RA to delete this OID.'),
-		           null, 401);
-				}
-	             
-	              http_response_code(200);
-            
-           		OIDplus::invoke_shutdown();
-		    	@header('Content-Type:application/json; charset=utf-8');
-			    echo json_encode([
-			      'code'=>200,
-			      'message'=>'Allocation dereferenced',
-			      'endpoint'=>$endpoint,
-			      'method'=>$requestMethod,
-			      'object'=>(array)$obj,
-			      'alloc'=>[],
-			    ]);
-			    die(); // return true;	     
-			}else{
-				if (!$obj->userHasParentalWriteRights()){
-		         throw new OIDplusException(_L('Authentication error. Please log in as the superior RA to maintain this OID.'),
-		           null, 401);
-				}
-				
-					          
-			    http_response_code(200);
-            
-           		OIDplus::invoke_shutdown();
-		    	@header('Content-Type:application/json; charset=utf-8');
-			    echo json_encode([
-			      'code'=>200,
-			      'message'=>'Allocation modified',
-			      'endpoint'=>$endpoint,
-			      'method'=>$requestMethod,
-			      'object'=>(array)$obj,
-			      'alloc'=>[],
-			    ]);
-			    die(); // return true;				
-			}
-
-    	  
-		}
-	}
-					   
 
    public function gui(string $id, array &$out, bool &$handled) {
 		$parts = explode('$',$id,2);
 		$id = $parts[0];
 		$ra_email = $parts[1] ?? null/*no filter*/;
 
-		if ($id == 'webfan:io4:bridge') {
-			$handled = true;
-
-			$out['title'] = _L('IO4 Bridge');
-		
-		}elseif ($id == 'webfan:webfat:setup') {
-			$handled = true;
+		   
+	   if(isset(self::PAGES[$id]) && is_callable([$this, self::PAGES[$id]])){ 
+		   $handled = true;
+          $out = \call_user_func_array([$this, self::PAGES[$id]], [$id, $out]);   
+	   }
+ 
+	}	
+				   
+				   
+   public function gui_PAGE_ID_WEBFAT(string $id, array $out) {
+		if ($id == self::PAGE_ID_WEBFAT && OIDplus::authUtils()->isAdminLoggedIn()) {
           //  header('Location: '.$this->getWebfatSetupLink());
 			//die('<meta http-equiv="refresh" content="0; url='.$this->getWebfatSetupLink().'">');
-             $out['text'] .= '<meta http-equiv="refresh" content="0; url='.$this->getWebfatSetupLink().'">'
+             $out['text'] .= ''//'<meta http-equiv="refresh" content="0; url='.$this->getWebfatSetupLink().'">'
 				   .'<a href="'.$this->getWebfatSetupLink().'">'.$this->getWebfatSetupLink().'</a>';
 		}
-	}				   
-
+	   return $out;
+   }   
+	
+	public function gui_PAGE_ID_BRIDGE(string $id, array $out) {
+		if ($id == self::PAGE_ID_BRIDGE && OIDplus::authUtils()->isAdminLoggedIn()) {
+		
+			$out['title'] = _L('IO4 Bridge');
+			//IO4_ALLOW_AUTOLOAD_FROM_REMOTE
+			$out['text'] .= <<<HTMLCODE
+			<legend>Remote autoloading</legend>
+			This is a functiuonallity for developer and admin purposes only when in setup/update or install mode. 
+			If everything is up and running fine you should disable it. If a class is missing when disabled please contact the 
+			developer of the plugin or core.<br />
+			To DISABLE autoloading classes from remote servers of Github, Webfan or custom, please set the OIDplus config variable
+			<br />
+			<b>IO4_ALLOW_AUTOLOAD_FROM_REMOTE</b> to <i>false</i>.
+			<br />
+			HTMLCODE;
+		}elseif($id == self::PAGE_ID_BRIDGE){
+			$handled = true;
+			
+		}
+		
+	   return $out;
+   }
+				   
 
 	/**
 	 * @param array $json
@@ -323,17 +905,23 @@ class OIDplusPagePublicIO4 extends OIDplusPagePluginAdmin //OIDplusPagePluginPub
 		}
 
 		$json[] = array(
-			'id' => 'webfan:webfat:setup',
+			'id' => self::PAGE_ID_COMPOSER,
+			//'icon' => $tree_icon,
+			'text' => _L('Composer Plugins'), 
+		);
+		
+		
+		$json[] = array(
+			'id' => self::PAGE_ID_WEBFAT,
 			//'icon' => $tree_icon,
 			'text' => _L('Webfan Webfat Setup'),
 			//'href'=>$this->getWebfatSetupLink(),
 		);
 
 		$json[] = array(
-			'id' => 'webfan:io4:bridge',
+			'id' => self::PAGE_ID_BRIDGE,
 			//'icon' => $tree_icon,
-			'text' => _L('Webfan IO4 Bridge'),
-			//'href'=>$this->getWebfatSetupLink(),
+			'text' => _L('Webfan IO4 Bridge'), 
 		);
 
 		return true;
@@ -349,7 +937,10 @@ class OIDplusPagePublicIO4 extends OIDplusPagePluginAdmin //OIDplusPagePluginPub
 	     if(null === $this->StubRunner){
 		$webfatFile =$this->getWebfatFile();
 		 require_once __DIR__.\DIRECTORY_SEPARATOR.'autoloader.php';
-		$this->StubRunner = (new \IO4\Webfat)->getWebfat($webfatFile, $load, $serveRequest);
+		$this->StubRunner = (new \IO4\Webfat)->getWebfat($webfatFile,
+														 $load 
+														 && OIDplus::baseConfig()->getValue('IO4_ALLOW_AUTOLOAD_FROM_REMOTE', true )
+														 , $serveRequest);
 	    }
 		
 		return $this->StubRunner;
@@ -364,7 +955,13 @@ class OIDplusPagePublicIO4 extends OIDplusPagePluginAdmin //OIDplusPagePluginPub
            return OIDplus::webpath(dirname($this->getWebfatFile()),true).basename($this->getWebfatFile());
 	}
 				   
+			
 				   
+				   
+				   
+				   
+				   
+	//deprecte and rewrite todo!			   
 	public function loadWebApp(StubHelperInterface | WebAppInterface | StubRunnerInterface $payload,
 							   bool $serveRequest = false) : WebAppInterface {
 		if($payload instanceof WebAppInterface){
@@ -396,6 +993,7 @@ class OIDplusPagePublicIO4 extends OIDplusPagePluginAdmin //OIDplusPagePluginPub
 		return $AppLauncher;
 	}		   
 				   
+	//deprecte and rewrite todo!			   
  	public function getApp() : WebAppInterface {
 		if(null === $this->AppLauncher){			
 			$this->AppLauncher = $this->loadWebApp( $this->getWebfat(true, false) );
@@ -404,12 +1002,15 @@ class OIDplusPagePublicIO4 extends OIDplusPagePluginAdmin //OIDplusPagePluginPub
 		}
 		return $this->AppLauncher;
 	}
+	//deprecte and rewrite todo!			   
     public function l()  : ClassLoaderInterface  {
 			return $this->getApp()->getContainer()->get('app.runtime.autoloader.remote');
-	}		
+	}	
+	//deprecte and rewrite todo!			   
     public function c()  : ContainerInterface  {
 			return $this->getApp()->getContainer();
-	}				   
+	}			
+	//deprecte and rewrite todo!			   
  	public function getContainer() : ContainerInterface {
  
 	    	if( ! $this->_containerDeclared ){	
@@ -524,7 +1125,7 @@ try {
 	}
 				   
 				 
-   
+   //deprecte and rewrite todo!
  	public function handle(ServerRequestInterface $request) : ResponseInterface
 	{		
 	   $app = $this->getApp();
@@ -715,18 +1316,7 @@ try {
 	}
 	
 	
-	public function getNotifications(string $user=null): array {
-		$notifications = array(); 
-		$notifications[] = 
-			new OIDplusNotification('INFO', _L('Running <a href="%1">%2</a><br /><a href="%3">Webfan Webfat Setup (%4)</a>', 
-											   OIDplus::gui()->link('oid:1.3.6.1.4.1.37476.9000.108.19361.24196'),
-											  htmlentities( 'OIDplus IO4 Bridge-Plugin' ),
-							                                  $this->getWebfatSetupLink(),
-							                                 $user
-											  )
-								   );
-		return $notifications;
-	}
+
 				   
 				   
 
@@ -1063,8 +1653,141 @@ try {
 	}
 	
 	
-
 	
+
+
+	public function restApiCall(string $requestMethod, string $endpoint, array $json_in) {
+		 
+		if (str_starts_with($endpoint, 'io4/')) {
+			$id = substr($endpoint, strlen('io4/'));
+			$obj = OIDplusObject::findFitting($id);
+				
+			if (!$obj) {
+				$obj = OIDplusObject::parse($id);
+			}
+			/*	*/
+				
+	    	if (!$obj) {
+              http_response_code(404);
+           //   throw new OIDplusException(_L('REST endpoint not found'), null, 404);
+           		OIDplus::invoke_shutdown();
+		    	@header('Content-Type:application/json; charset=utf-8');
+			    echo json_encode([
+			      'code'=>404,
+			      'message'=>'Not found',
+			      'endpoint'=>$endpoint,
+			      'method'=>$requestMethod,
+			      'payload'=>$json_in,
+			    ]);
+			    die(); // return true;
+			}
+			
+			if('GET' === $requestMethod){
+				 if (!$obj->userHasReadRights() && $obj->isConfidental()){    		
+    		        throw new OIDplusException('Insufficient authorization to read information about this object.', null, 401);
+		         }	
+		         
+	              http_response_code(200);
+           //   throw new OIDplusException(_L('REST endpoint not found'), null, 404);
+           		OIDplus::invoke_shutdown();
+		    	@header('Content-Type:application/json; charset=utf-8');
+			    echo json_encode([
+			      'code'=>200,
+			      'message'=>'Allocation Information Data',
+			      'endpoint'=>$endpoint,
+			      'method'=>$requestMethod,
+			      'object'=>(array)$obj,
+			      'alloc'=>[],
+			    ]);
+			    die(); // return true;	         
+		         
+		         
+			}elseif('DELETE' === $requestMethod){
+				if (!$obj->userHasParentalWriteRights()){
+		         throw new OIDplusException(_L('Authentication error. Please log in as the superior RA to delete this OID.'),
+		           null, 401);
+				}
+	             
+	              http_response_code(200);
+            
+           		OIDplus::invoke_shutdown();
+		    	@header('Content-Type:application/json; charset=utf-8');
+			    echo json_encode([
+			      'code'=>200,
+			      'message'=>'Allocation dereferenced',
+			      'endpoint'=>$endpoint,
+			      'method'=>$requestMethod,
+			      'object'=>(array)$obj,
+			      'alloc'=>[],
+			    ]);
+			    die(); // return true;	     
+			}else{
+				if (!$obj->userHasParentalWriteRights()){
+		         throw new OIDplusException(_L('Authentication error. Please log in as the superior RA to maintain this OID.'),
+		           null, 401);
+				}
+				
+					          
+			    http_response_code(200);
+            
+           		OIDplus::invoke_shutdown();
+		    	@header('Content-Type:application/json; charset=utf-8');
+			    echo json_encode([
+			      'code'=>200,
+			      'message'=>'Allocation modified',
+			      'endpoint'=>$endpoint,
+			      'method'=>$requestMethod,
+			      'object'=>(array)$obj,
+			      'alloc'=>[],
+			    ]);
+			    die(); // return true;				
+			}
+
+    	  
+		}
+	}
+					   
+ 
+		/**
+	 * @param array $out
+	 * @return void
+	 */
+	private function pluginTableHead(array &$out) {
+		$out['text'] .= '	<tr>';
+		$out['text'] .= '		<th width="30%">'._L('Class name').'</th>';
+		$out['text'] .= '		<th width="30%">'._L('Plugin name').'</th>';
+		$out['text'] .= '		<th width="10%">'._L('Version').'</th>';
+		$out['text'] .= '		<th width="15%">'._L('Author').'</th>';
+		$out['text'] .= '		<th width="15%">'._L('License').'</th>';
+		$out['text'] .= '	</tr>';
+	}
+
+	/**
+	 * @param array $out
+	 * @param OIDplusPlugin $plugin
+	 * @param int $modifier
+	 * @param string $na_reason
+	 * @return void
+	 */
+	private function pluginTableLine(array &$out, OIDplusPlugin $plugin, int $modifier=0, string $na_reason='') {
+		$html_reason = empty($na_reason) ? '' : ' ('.htmlentities($na_reason).')';
+		$out['text'] .= '	<tr>';
+		if ($modifier == 0) {
+			// normal line
+			$out['text'] .= '		<td><a '.OIDplus::gui()->link('oidplus:system_plugins$'.get_class($plugin)).'>'.htmlentities(get_class($plugin)).'</a>'.$html_reason.'</td>';
+		} else if ($modifier == 1) {
+			// active
+			$out['text'] .= '<td><a '.OIDplus::gui()->link('oidplus:system_plugins$'.get_class($plugin)).'><b>'.htmlentities(get_class($plugin)).'</b>'.$html_reason.'</a></td>';
+		} else if ($modifier == 2) {
+			// not available with reason
+			$out['text'] .= '<td><a '.OIDplus::gui()->link('oidplus:system_plugins$'.get_class($plugin)).'><font color="gray">'.htmlentities(get_class($plugin)).'</font></a><font color="gray">'.$html_reason.'</font></td>';
+		}
+		$out['text'] .= '		<td>' . htmlentities(empty($plugin->getManifest()->getName()) ? _L('n/a') : $plugin->getManifest()->getName()) . '</td>';
+		$out['text'] .= '		<td>' . htmlentities(empty($plugin->getManifest()->getVersion()) ? _L('n/a') : $plugin->getManifest()->getVersion()) . '</td>';
+		$out['text'] .= '		<td>' . htmlentities(empty($plugin->getManifest()->getAuthor()) ? _L('n/a') : $plugin->getManifest()->getAuthor()) . '</td>';
+		$out['text'] .= '		<td>' . htmlentities(empty($plugin->getManifest()->getLicense()) ? _L('n/a') : $plugin->getManifest()->getLicense()) . '</td>';
+		$out['text'] .= '	</tr>';
+	}
 
 
 }
