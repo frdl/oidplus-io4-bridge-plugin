@@ -1,0 +1,289 @@
+{
+	"name": "danielmarschall/oidplus",
+	"description": "OIDplus 2.0",
+	"version": "2.0",
+	"type": "project",
+	"homepage": "https://www.oidplus.com/",
+	"authors": [
+		{
+			"name": "Daniel Marschall",
+			"email": "info@daniel-marschall.de",
+			"homepage": "https://www.daniel-marschall.de/"
+		}
+	],
+	"license": [
+		"Apache-2.0"
+	],
+	"prefer-dist": true,
+	"minimum-stability": "dev",
+	"config": {
+		"optimize-autoloader" : true,
+	    "classmap-authoritative" : false, 
+	    "prepend-autoloader": true, 
+	    "cache-files-ttl": 120, 
+		"secure-http": false,
+		"preferred-install": "auto",
+		"autoloader-suffix": "OidPlusComposer",
+		"allow-plugins": {
+		  "danielmarschall/*": true,
+		  "airmad/*": true,
+		  "civicrm/*": true,
+		  "composer/*": true,
+		  "frdl/*": true,
+		  "kylekatarnls/update-helper": true,
+		  "vendor-patch/composer-custom-directory-installer": true,
+		  "vendor-patch/composer-installers-extender": true,
+		  "frdl/oiplus-composer-plugin": true,
+		  "smoren/mushroom-hook-manager": true,
+		  "composer/installers": true,
+		  "oomphinc/composer-installers-extender": true
+    	}	
+	},		
+  "require-dev": {
+	"roave/security-advisories": "dev-latest"
+  },	
+   "extra": { 
+	 "compile-mode" : "all",
+     "merge-plugin": {        			
+			"include": [
+				"plugins/*/*/*/composer.json",
+				"composer.json"
+			],
+			"require": [			
+				"composer.json"
+			],
+			"recurse": true,
+			"replace": false,
+			"ignore-duplicates": false,
+			"merge-dev": true,
+			"merge-extra": true,
+			"merge-extra-deep": true,
+			"merge-scripts": true
+    },
+		
+		"installer-types": [ 
+				"oiplus-plugin-public-pages",
+				"oiplus-plugin-ra-pages",
+				"oiplus-plugin-admin-pages",
+				"oiplus-plugin-auth",
+				"oiplus-plugin-database",
+				"oiplus-plugin-sql-slang",
+				"oiplus-plugin-logger",
+				"oiplus-plugin-object-types",
+				"oiplus-plugin-language",
+				"oiplus-plugin-design",
+				"oiplus-plugin-captcha"
+			"project",
+			"library"
+		],
+   "installer-paths": {
+			"vendor/{$vendor}/{$name}/":             [
+				"type:library",
+				"type:project"
+			],
+			              
+			"plugins/{$vendor}/publicPages/{$name}/":              [
+				"type:oiplus-plugin-public-pages"
+			],
+			"plugins/{$vendor}/raPages/{$name}/": [
+				"type:oiplus-plugin-ra-pages"
+			],
+			"plugins/{$vendor}/adminPages/{$name}/":             [
+				"type:oiplus-plugin-admin-pages"
+			],
+			"plugins/{$vendor}/auth/{$name}/": [
+				"type:oiplus-plugin-auth"
+			],
+			"plugins/{$vendor}/database/{$name}/": [
+				"type:oiplus-plugin-database"
+			],
+			"plugins/{$vendor}/sqlSlang/{$name}/": [
+				"type:oiplus-plugin-sql-slang"
+			],
+			"plugins/{$vendor}/logger/{$name}/": [
+				"type:oiplus-plugin-logger"
+			],
+			"plugins/{$vendor}/objectTypes/{$name}/": [
+				"type:oiplus-plugin-object-types"
+			],
+			"plugins/{$vendor}/language/{$name}/": [
+				"type:oiplus-plugin-language"
+			],
+			"plugins/{$vendor}/design/{$name}/": [
+				"type:oiplus-plugin-design"
+			],
+			"plugins/{$vendor}/captcha/{$name}/": [
+				"type:oiplus-plugin-captcha"
+			]
+		},
+
+		"dependency-scripts": {
+			"run": true,
+			"trust": [
+				"danielmarschall\/*",
+				"airmad\/*",
+				"composer\/*",
+				"symfony\/*",
+				"frdl\/*",
+				"webfan3\/*",
+				"wehowski\/*",
+				"vendor-patch\/*",
+				"smoren\/mushroom-hook-manager",
+				"oomphinc\/composer-installers-extender"
+			],
+			"exclude": [],
+			"types": [ 
+			"oiplus-plugin-public-pages",
+			"oiplus-plugin-ra-pages",
+			"oiplus-plugin-admin-pages",
+			"oiplus-plugin-auth",
+			"oiplus-plugin-database",
+			"oiplus-plugin-sql-slang",
+			"oiplus-plugin-logger",
+			"oiplus-plugin-object-types",
+			"oiplus-plugin-language",
+			"oiplus-plugin-design",
+			"oiplus-plugin-captcha",
+			"project",
+			"library"
+			]
+		}
+  }, 		
+	"repositories": [		
+		{
+			"type": "composer", 
+			"url": "https://oidplus-plugins.repo.pkg.dev.frdl.de"
+		},
+		 {
+			"type": "package",
+			"packagist.org": false,
+			"package": {
+				"name": "emn178/js-sha3",
+				"version": "master",
+				"license": [
+					"MIT"
+				],
+				"source": {
+					"url": "https://github.com/emn178/js-sha3",
+					"type": "git",
+					"reference": "master"
+				}
+			}
+		},
+		 {
+			"type": "package",
+			"packagist.org": false,
+			"package": {
+				"name": "gedmarc/layout",
+				"version": "master",
+				"license": [
+					"GPL-3.0-or-later",
+					"MIT"
+				],
+				"source": {
+					"url": "https://github.com/GedMarc/layout",
+					"type": "git",
+					"reference": "master"
+				}
+			}
+		},
+		{
+			"type": "package",
+			"packagist.org": false,
+			"package": {
+				"name": "dcodeio/bcrypt.js",
+				"version": "master",
+				"license": [
+					"BSD-3-Clause",
+					"MIT"
+				],
+				"source": {
+					"url": "https://github.com/dcodeIO/bcrypt.js",
+					"type": "git",
+					"reference": "master"
+				}
+			}
+		},
+		 {
+			"type": "package",
+			"packagist.org": false,
+			"package": {
+				"name": "script47/bs5-utils",
+				"version": "master",
+				"license": [
+					"MIT"
+				],
+				"source": {
+					"url": "https://github.com/Script47/bs5-utils",
+					"type": "git",
+					"reference": "master"
+				}
+			}
+		},
+		 {
+			"type": "package",
+			"packagist.org": false,
+			"package": {
+				"name": "spamspan/spamspan",
+				"version": "master",
+				"license": "GPL-2.0-only",
+				"dist": {
+					"url": "http://www.spamspan.com/releases/spamspan-latest.zip",
+					"type": "zip",
+					"reference": "master"
+				}
+			}
+		}
+	],	
+	"require": {
+		"php": ">=7.0",
+			
+		"frdl/oiplus-composer-plugin" : ">=1.0.4",	 
+			
+		"frdl/oidplus-io4-bridge-plugin" : ">=v0.0.4",		
+ 
+	   "knplabs/packagist-api" : "*",
+	   "frdl/composer-adapter" : "*",
+	   "frdl/event-module" : "*",	
+	   "yosymfony/resource-watcher" : "*", 
+		
+		
+			
+		"components/jquery": "^3.5",
+		"components/jqueryui": "^1.12",
+		"matthiasmullie/minify": "^1.3",
+		"firebase/php-jwt": "*",
+		"tinymce/tinymce": "^5.8",
+		"dcodeio/bcrypt.js": "*@dev",
+		"danielmarschall/vnag": "*@dev",
+		"danielmarschall/uuid_mac_utils": "*@dev",
+		"danielmarschall/php_utils": "*@dev",
+		"danielmarschall/fileformats": "*@dev",
+		"danielmarschall/oidconverter": "*@dev",
+		"spamspan/spamspan": "*@dev",
+		"vakata/jstree": "^3.3",
+		"twbs/bootstrap": "^5.0",
+		"symfony/polyfill-mbstring": "<=1.19",
+		"gedmarc/layout": "*@dev",
+		"emn178/js-sha3": "*@dev",
+		"danielmarschall/php-sha3": "*@dev",
+		"tweeb/tinymce-i18n": "^2.0",
+		"phpseclib/phpseclib": "~3.0",
+		"script47/bs5-utils": "*",
+		"danielmarschall/glip": "0.1.3.x-dev",
+		"ext-json": "*",
+		"spomky-labs/php-punycode": "dev-master"
+	},
+	"scripts": {
+		"post-update-cmd": [
+			"curl https://curl.se/ca/cacert.pem -L -sS -o vendor/cacert.pem",
+			"echo 'Options -Indexes' > vendor/.htaccess",
+			"touch vendor/index.html"
+		],
+		"post-install-cmd": [
+			"curl https://curl.se/ca/cacert.pem -L -sS -o vendor/cacert.pem",
+			"echo 'Options -Indexes' > vendor/.htaccess",
+			"touch vendor/index.html"
+		]
+	}
+}
