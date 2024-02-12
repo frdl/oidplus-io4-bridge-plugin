@@ -113,6 +113,7 @@ use Monolog\Logger as MonoLogger;
 /*
 API:
 public function packagist(string $method, array $params = [])
+public function package(string $name) : array
 */
 class OIDplusPagePublicIO4 extends OIDplusPagePluginAdmin //OIDplusPagePluginPublic // implements RequestHandlerInterface
 	implements  //INTF_OID_1_3_6_1_4_1_37476_2_5_2_3_1, /* oobeEntry, oobeRequested */
@@ -222,17 +223,18 @@ class OIDplusPagePublicIO4 extends OIDplusPagePluginAdmin //OIDplusPagePluginPub
          $repository,
          $name,
          $description,
-		   '',
-		   ''
+		  $status,
+		   $form
         );
    }
 
 				   
-	public function package(string $name){
+	public function package(string $name) : array {
 			     $cacheFile = $this->packagist_cache_file(['method'=>__METHOD__, 'params' => [$name]]);
 		         $out = $this->packagist_read_cache($cacheFile);
 			     if(!$out){
 					//$out =  $this->cc()->all(['type' => 'oiplus-plugin-object-types']);
+					 set_time_limit( (@ini_get('max_execution_time')) + 60 );
 					$p = \call_user_func_array([$this->cc(), 'get'], [$name]);
 					$r = new \ReflectionObject($p); 
 				    $methods = $r->getMethods();
@@ -257,7 +259,7 @@ class OIDplusPagePublicIO4 extends OIDplusPagePluginAdmin //OIDplusPagePluginPub
 			     $cacheFile = $this->packagist_cache_file(['method'=>$method, 'params' => $params]);
 			     $out = $this->packagist_read_cache($cacheFile);
 			     if(!$out){
-					//$out =  $this->cc()->all(['type' => 'oiplus-plugin-object-types']);
+					set_time_limit( (@ini_get('max_execution_time')) + 60 );
 					$out = \call_user_func_array([$this->cc(), $method], $params);
 					$this->packagist_write_cache($out, $cacheFile); 
 				 }
