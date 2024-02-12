@@ -5,9 +5,15 @@
     "keywords": ["oiplus", "io4"],
     "license":  ["MIT"],
     "autoload" : {
-        "classmap" : ["OIDplusPagePublicIO4.class.php"]
+        "classmap" : ["."]
     },
     "extra" : {
         "installer-name" : "io4"
+    },
+    "require" : {
+	   "knplabs/packagist-api" : "*",
+	   "frdl/composer-adapter" : "*",
+	   "frdl/event-module" : "*",	
+	   "yosymfony/resource-watcher" : "*"
     }
 }
