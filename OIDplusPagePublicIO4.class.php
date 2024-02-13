@@ -163,18 +163,30 @@ class OIDplusPagePublicIO4 extends OIDplusPagePluginAdmin //OIDplusPagePluginPub
 	protected $packagistExpires;
 				   
 	protected $packagistClient = null;
+	protected $composerUI = null;
 
 	/**
 	 * @var int
 	 */
 	public function __construct() { 
-		$this->packagistCacheDir = OIDplus::baseConfig()->getValue('IO4_PACKAGIST_CACHE_DIRECTORY', OIDplus::localpath().'userdata/cache/' );
+		$this->packagistCacheDir = OIDplus::baseConfig()->getValue('IO4_PACKAGIST_CACHE_DIRECTORY',
+																   OIDplus::localpath().'userdata/cache/' );
 		$this->packagistExpires = OIDplus::baseConfig()->getValue('IO4_PACKAGIST_CACHE_EXPIRES', 15 * 60 );
 		
 		$this->schemaCacheDir = OIDplus::baseConfig()->getValue('SCHEMA_CACHE_DIRECTORY', OIDplus::localpath().'userdata/cache/' );
 		$this->schemaCacheExpires = OIDplus::baseConfig()->getValue('SCHEMA_CACHE_EXPIRES', 60 * 60 );		
-	}				   
-
+	}				
+				   
+	protected function composer(){
+	  if(null === $this->composerUI){
+	    if(!class_exists(\Webfan\ComposerAdapter\Installer::class, true)){
+		   $this->getWebfat(true, false);	
+		}
+		$this->composerUI = new \Webfan\ComposerAdapter\Installer(OIDplus::localpath());
+	  }
+		return $this->composerUI;
+	}
+				   
 	protected function cc(){
 	  if(null === $this->packagistClient){
 	    if(!class_exists(\Packagist\Api\Client::class, true)){
@@ -227,7 +239,21 @@ class OIDplusPagePublicIO4 extends OIDplusPagePluginAdmin //OIDplusPagePluginPub
 		   $form
         );
    }
-
+				   
+   protected function p_status($name, $composer){
+	  return sprintf(
+    '  
+	  <table>
+	     <tr>
+		   <td>composer.json</td>
+		   <td>%s</td>
+		 </tr>
+	   </table>
+	   ',
+         isset($composer['require'][$name])? 'required' : '<span style="color:red;">uninstalled</span>'
+        );
+   }
+				   
 				   
 	public function package(string $name) : array {
 			     $cacheFile = $this->packagist_cache_file(['method'=>__METHOD__, 'params' => [$name]]);
@@ -297,7 +323,10 @@ class OIDplusPagePublicIO4 extends OIDplusPagePluginAdmin //OIDplusPagePluginPub
 	   $href_example_composer = OIDplus::webpath(__DIR__,OIDplus::PATH_RELATIVE).'~composer.core.2.0.txt';
 	   
 		if ($id == self::PAGE_ID_COMPOSER && OIDplus::authUtils()->isAdminLoggedIn()) {
-		     
+		     $composer = json_decode(file_get_contents(OIDplus::localpath().'composer.json'));
+			 $composer = (array)$composer;
+			 $composer['require'] = (array)$composer['require'];
+			
              $out['title'] = _L('Composer Plugins');
              $out['text'] .= '' 
 				   .'Please take a look at the <a href="'.$href_example_composer.'" target="_blank">root composer.json example</a> to find out how the OIDplus composer plugin manager can be enabled. You MUST include the <b><i>trusted and allowed plugins sections</i></b> as in the example and you MUST require the package <b><i>frdl/oidplus-composer-plugin</i></b>! All composer-plugins (like the frdl/oidplus-composer-plugin, NOT the OIDplus-plugins-packages) MUST be listed <b>first</b> (after the php requirement) in the requirements section of the composer.json file, per composer spec.!';
@@ -352,7 +381,7 @@ class OIDplusPagePublicIO4 extends OIDplusPagePluginAdmin //OIDplusPagePluginPub
 			    foreach($packs as $pname){ 
 				  	  $package = $this->package($pname);
 					  extract($package);
-					  $out['text'] .= $this->p_row($name, $repository, $description, '', '');
+					  $out['text'] .= $this->p_row($name, $repository, $description, $this->p_status($name, $composer), '');
 				}
 			   $out['text'] .= '</tbody>';
 			    $out['text'] .= '</table>';
@@ -388,7 +417,7 @@ class OIDplusPagePublicIO4 extends OIDplusPagePluginAdmin //OIDplusPagePluginPub
 			    foreach($packs as $pname){ 
 				  	  $package = $this->package($pname);
 					  extract($package);
-					  $out['text'] .= $this->p_row($name, $repository, $description, '', '');
+					  $out['text'] .= $this->p_row($name, $repository, $description, $this->p_status($name, $composer), '');
 				}
 			   $out['text'] .= '</tbody>';
 			    $out['text'] .= '</table>';
@@ -423,7 +452,7 @@ class OIDplusPagePublicIO4 extends OIDplusPagePluginAdmin //OIDplusPagePluginPub
 			    foreach($packs as $pname){ 
 				  	  $package = $this->package($pname);
 					  extract($package);
-					  $out['text'] .= $this->p_row($name, $repository, $description, '', '');
+					  $out['text'] .= $this->p_row($name, $repository, $description, $this->p_status($name, $composer), '');
 				}
 			   $out['text'] .= '</tbody>';
 			    $out['text'] .= '</table>';
@@ -461,7 +490,7 @@ class OIDplusPagePublicIO4 extends OIDplusPagePluginAdmin //OIDplusPagePluginPub
 			    foreach($packs as $pname){ 
 				  	  $package = $this->package($pname);
 					  extract($package);
-					  $out['text'] .= $this->p_row($name, $repository, $description, '', '');
+					  $out['text'] .= $this->p_row($name, $repository, $description, $this->p_status($name, $composer), '');
 				}
 			   $out['text'] .= '</tbody>';
 			    $out['text'] .= '</table>';
@@ -503,7 +532,7 @@ class OIDplusPagePublicIO4 extends OIDplusPagePluginAdmin //OIDplusPagePluginPub
 			    foreach($packs as $pname){ 
 				  	  $package = $this->package($pname);
 					  extract($package);
-					  $out['text'] .= $this->p_row($name, $repository, $description, '', '');
+					  $out['text'] .= $this->p_row($name, $repository, $description, $this->p_status($name, $composer), '');
 				}
 			   $out['text'] .= '</tbody>';
 			    $out['text'] .= '</table>';
@@ -539,7 +568,7 @@ class OIDplusPagePublicIO4 extends OIDplusPagePluginAdmin //OIDplusPagePluginPub
 			    foreach($packs as $pname){ 
 				  	  $package = $this->package($pname);
 					  extract($package);
-					  $out['text'] .= $this->p_row($name, $repository, $description, '', '');
+					  $out['text'] .= $this->p_row($name, $repository, $description, $this->p_status($name, $composer), '');
 				}
 			   $out['text'] .= '</tbody>';
 			    $out['text'] .= '</table>';			
@@ -577,7 +606,7 @@ class OIDplusPagePublicIO4 extends OIDplusPagePluginAdmin //OIDplusPagePluginPub
 			    foreach($packs as $pname){ 
 				  	  $package = $this->package($pname);
 					  extract($package);
-					  $out['text'] .= $this->p_row($name, $repository, $description, '', '');
+					  $out['text'] .= $this->p_row($name, $repository, $description, $this->p_status($name, $composer), '');
 				}
 			   $out['text'] .= '</tbody>';
 			    $out['text'] .= '</table>';					
@@ -646,7 +675,7 @@ class OIDplusPagePublicIO4 extends OIDplusPagePluginAdmin //OIDplusPagePluginPub
 			    foreach($packs as $pname){ 
 				  	  $package = $this->package($pname);
 					  extract($package);
-					  $out['text'] .= $this->p_row($name, $repository, $description, '', '');
+					  $out['text'] .= $this->p_row($name, $repository, $description, $this->p_status($name, $composer), '');
 				}
 			   $out['text'] .= '</tbody>';
 			    $out['text'] .= '</table>';					
@@ -687,7 +716,7 @@ class OIDplusPagePublicIO4 extends OIDplusPagePluginAdmin //OIDplusPagePluginPub
 			    foreach($packs as $pname){ 
 				  	  $package = $this->package($pname);
 					  extract($package);
-					  $out['text'] .= $this->p_row($name, $repository, $description, '', '');
+					  $out['text'] .= $this->p_row($name, $repository, $description, $this->p_status($name, $composer), '');
 				}
 			   $out['text'] .= '</tbody>';
 			    $out['text'] .= '</table>';					
@@ -722,7 +751,7 @@ class OIDplusPagePublicIO4 extends OIDplusPagePluginAdmin //OIDplusPagePluginPub
 			    foreach($packs as $pname){ 
 				  	  $package = $this->package($pname);
 					  extract($package);
-					  $out['text'] .= $this->p_row($name, $repository, $description, '', '');
+					  $out['text'] .= $this->p_row($name, $repository, $description, $this->p_status($name, $composer), '');
 				}
 			   $out['text'] .= '</tbody>';
 			    $out['text'] .= '</table>';				
@@ -759,7 +788,7 @@ class OIDplusPagePublicIO4 extends OIDplusPagePluginAdmin //OIDplusPagePluginPub
 			    foreach($packs as $pname){ 
 				  	  $package = $this->package($pname);
 					  extract($package);
-					  $out['text'] .= $this->p_row($name, $repository, $description, '', '');
+					  $out['text'] .= $this->p_row($name, $repository, $description, $this->p_status($name, $composer), '');
 				}
 			   $out['text'] .= '</tbody>';
 			    $out['text'] .= '</table>';				
@@ -782,7 +811,7 @@ class OIDplusPagePublicIO4 extends OIDplusPagePluginAdmin //OIDplusPagePluginPub
 			 //}
 		 			
 			
-		}
+		}//gui and is admin
 	   return $out;
    }				   
 				   
