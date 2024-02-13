@@ -250,7 +250,7 @@ class OIDplusPagePublicIO4 extends OIDplusPagePluginAdmin //OIDplusPagePluginPub
 		 </tr>
 	   </table>
 	   ',
-         isset($composer['require'][$name])? 'required' : '<span style="color:red;">uninstalled</span>'
+         isset($composer['require'][$name])? $composer['require'][$name] : '<span style="color:red;">uninstalled</span>'
         );
    }
 				   
