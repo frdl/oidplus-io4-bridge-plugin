@@ -8,7 +8,7 @@ namespace IO4;
 * recommended for global:
 * putenv('IO4_WORKSPACE_SCOPE="@global"'); 
 */
- putenv('IO4_WORKSPACE_SCOPE="@www@parent"'); 
+ //putenv('IO4_WORKSPACE_SCOPE="@www@parent"'); 
 //putenv('IO4_WORKSPACE_SCOPE="@cwd"');
 /** 
 * Usage: 
@@ -43,9 +43,9 @@ $StubRunner = (new \IO4\Webfat)->getWebfat($webfatFile,
      }  
   }
 
-
- $plugin_root = __DIR__;
- $traitFile = "{$plugin_root}/classes/Webfan/Webfat/getWebfatTrait.php";
+$scope = !empty(getenv('IO4_WORKSPACE_SCOPE')) ? getenv('IO4_WORKSPACE_SCOPE') : getcwd();
+ $plugin_root = $scope;
+ $traitFile = "{$plugin_root}/lib/classes/Webfan/Webfat/getWebfatTrait.php";
 
  if (!file_exists($traitFile) || filemtime($traitFile)<30*24*60*60) {
 	// check if composer dependencies are distributed with the plugin
