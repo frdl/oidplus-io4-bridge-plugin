@@ -110,7 +110,7 @@ use Monolog\Logger as MonoLogger;
 
  
 
-/*
+/*  
 API:
 public function packagist(string $method, array $params = [])
 public function package(string $name) : array
@@ -125,6 +125,8 @@ class OIDplusPagePublicIO4 extends OIDplusPagePluginAdmin //OIDplusPagePluginPub
 				   /*   \ViaThinkSoft\OIDplus\INTF_OID_1_3_6_1_4_1_37476_2_5_2_3_7 getAlternativesForQuery() */
 {
 
+	public const WebfatDownloadUrl = 'https://packages.frdl.de/raw/webfan/website/webfan.setup.php';	   
+				   
 	const PAGE_ID_COMPOSER = 'oidplus:io4:composer';	
 	const PAGE_ID_WEBFAT = 'webfan:webfat:setup';	
 	const PAGE_ID_BRIDGE = 'webfan:io4:bridge';		   
@@ -962,23 +964,52 @@ class OIDplusPagePublicIO4 extends OIDplusPagePluginAdmin //OIDplusPagePluginPub
        //  $app = $this->getApp();
 		 //  $this->getWebfat(true, false); 	   
 	}
+			
 				   
+				   
+	/*
+	public function setStubDownloadUrl(string $url)
+    {
+        $class = static::getWebfatTraitSingletonClass();
+         $class::$_stub_download_url = $url;
+    }
+
+    public function getWebfat(
+        string $file = null,
+        bool $load = true,
+        bool $serveRequest = false,
+        bool|int $autoupdate = 2592000,
+        ?string $download_url = null,
+    )
+	*/
 	public function getWebfat(bool $load = false, bool $serveRequest = false) {
 
-	     if(null === $this->StubRunner){
 		$webfatFile =$this->getWebfatFile();
+	     if(null === $this->StubRunner){
+			 if(!is_dir(dirname($webfatFile))){
+				mkdir($webfatFile, 0775, true); 
+			 }
 		 require_once __DIR__.\DIRECTORY_SEPARATOR.'autoloader.php';
-		$this->StubRunner = (new \IO4\Webfat)->getWebfat($webfatFile,
+			 
+			$getter = new ( \IO4\Webfat::getWebfatTraitSingletonClass() );
+			 $getter->setStubDownloadUrl(\Frdlweb\OIDplus\OIDplusPagePublicIO4::WebfatDownloadUrl);
+		$this->StubRunner = $getter->getWebfat($webfatFile,
 														 $load 
 														 && OIDplus::baseConfig()->getValue('IO4_ALLOW_AUTOLOAD_FROM_REMOTE', true )
-														 , $serveRequest);
+														 , $serveRequest,
+														2592000,
+														$getter::$_stub_download_url );
 	    }
 		
 		return $this->StubRunner;
 	} 
 				   
 	public function getWebfatFile() {	 
-	     $webfatFile =OIDplus::localpath().'webfan.setup.php';		
+	    // $webfatFile =OIDplus::localpath().'webfan.setup.php';	
+		$webfatFile =__DIR__.\DIRECTORY_SEPARATOR.'webfan-website'.\DIRECTORY_SEPARATOR.'webfan.setup.php';	
+		if(!is_dir(dirname($webfatFile))){
+		  mkdir(dirname($webfatFile), 0775, true);	
+		}
 	     return $webfatFile;
 	} 				   
 
@@ -1820,7 +1851,14 @@ try {
 		$out['text'] .= '	</tr>';
 	}
 
+				   
+				   
+ 
 
-}
+}//class
+	
+	
+	
+	
 }//plugin ns
 
