@@ -323,8 +323,10 @@ class OIDplusPagePublicIO4 extends OIDplusPagePluginAdmin //OIDplusPagePluginPub
 				   
    public function gui_PAGE_ID_COMPOSER(string $id, array $out) {
 	   $href_example_composer = OIDplus::webpath(__DIR__,OIDplus::PATH_RELATIVE).'~composer.core.2.0.txt';
-	   
+ 
 		if ($id == self::PAGE_ID_COMPOSER && OIDplus::authUtils()->isAdminLoggedIn()) {
+		
+			
 		     $composer = json_decode(file_get_contents(OIDplus::localpath().'composer.json'));
 			 $composer = (array)$composer;
 			 $composer['require'] = (array)$composer['require'];
@@ -982,7 +984,7 @@ class OIDplusPagePublicIO4 extends OIDplusPagePluginAdmin //OIDplusPagePluginPub
         ?string $download_url = null,
     )
 	*/
-	public function getWebfat(bool $load = false, bool $serveRequest = false) {
+	public function getWebfat(bool $load = true, bool $serveRequest = false) {
 
 		$webfatFile =$this->getWebfatFile();
 	     if(null === $this->StubRunner){
@@ -1006,10 +1008,11 @@ class OIDplusPagePublicIO4 extends OIDplusPagePluginAdmin //OIDplusPagePluginPub
 				   
 	public function getWebfatFile() {	 
 	    // $webfatFile =OIDplus::localpath().'webfan.setup.php';	
-		$webfatFile =__DIR__.\DIRECTORY_SEPARATOR.'webfan-website'.\DIRECTORY_SEPARATOR.'webfan.setup.php';	
-		if(!is_dir(dirname($webfatFile))){
-		  mkdir(dirname($webfatFile), 0775, true);	
-		}
+	 //	$webfatFile =__DIR__.\DIRECTORY_SEPARATOR.'webfan-website'.\DIRECTORY_SEPARATOR.'webfan.setup.php';	
+			$webfatFile = $_SERVER['DOCUMENT_ROOT'].\DIRECTORY_SEPARATOR.'webfan.setup.php';	
+		//if(!is_dir(dirname($webfatFile))){
+		//  mkdir(dirname($webfatFile), 0775, true);	
+	//	}
 	     return $webfatFile;
 	} 				   
 
