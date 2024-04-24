@@ -1,7 +1,7 @@
 {
     "name": "frdl/oidplus-io4-bridge-plugin",
     "type": "oiplus-plugin-admin-pages",
-    "description": "Bridge from OIDplus to Webfat/IO4",
+    "description": "Bridge from OIDplus to Webfat/IO4, OIDplus Composer (Plugins) GUI, Admin-/Devtools, OIDplus Setup",
     "keywords": ["oiplus", "io4"],
     "license":  ["MIT"],
     "autoload" : {
@@ -10,11 +10,19 @@
     "extra" : {
         "installer-name" : "io4"
     },
+	"suggest": {
+		"danielmarschall/oidplus": "The main project, this must be your root composer.json project!",
+		"frdl/oiplus-composer-plugin": "Composer Plugin for OIDplus Installations, MUST be required first in the root project, enables OIDplus composer bridges/plugins/admin-gui..."
+	},
     "require" : {
-	   "knplabs/packagist-api" : "*",
 	   "frdl/composer-adapter" : "*",
+	   "frdl/oiplus-composer-plugin": "*",
 	   "frdl/event-module" : "*",	
 	   "yosymfony/resource-watcher" : "*",
+	   "doctrine/cache" : "*",
+	   "knplabs/packagist-api" : "*",
+	   "frdl/oidplus-frdljs-cdn-proxy-plugin" : "*",
 	   "webfan/website" : "*"
+	   
     }
 }
