@@ -988,14 +988,14 @@ class OIDplusPagePublicIO4 extends OIDplusPagePluginAdmin //OIDplusPagePluginPub
 
 		$webfatFile =$this->getWebfatFile();
 	     if(null === $this->StubRunner){
-			 if(!is_dir(dirname($webfatFile))){
-				mkdir($webfatFile, 0775, true); 
+			 if(!is_dir(dirname($webfatFile)) && dirname($webfatFile) !== $_SERVER['DOCUMENT_ROOT']){
+				mkdir(dirname($webfatFile), 0775, true); 
 			 }
 		 require_once __DIR__.\DIRECTORY_SEPARATOR.'autoloader.php';
 			 
 			$getter = new ( \IO4\Webfat::getWebfatTraitSingletonClass() );
 			 $getter->setStubDownloadUrl(\Frdlweb\OIDplus\OIDplusPagePublicIO4::WebfatDownloadUrl);
-		$this->StubRunner = $getter->getWebfat($webfatFile,
+	    	$this->StubRunner = $getter->getWebfat($webfatFile,
 														 $load 
 														 && OIDplus::baseConfig()->getValue('IO4_ALLOW_AUTOLOAD_FROM_REMOTE', true )
 														 , $serveRequest,
@@ -1009,7 +1009,9 @@ class OIDplusPagePublicIO4 extends OIDplusPagePluginAdmin //OIDplusPagePluginPub
 	public function getWebfatFile() {	 
 	    // $webfatFile =OIDplus::localpath().'webfan.setup.php';	
 	 //	$webfatFile =__DIR__.\DIRECTORY_SEPARATOR.'webfan-website'.\DIRECTORY_SEPARATOR.'webfan.setup.php';	
-			$webfatFile = $_SERVER['DOCUMENT_ROOT'].\DIRECTORY_SEPARATOR.'webfan.setup.php';	
+			$webfatFile =is_writable($_SERVER['DOCUMENT_ROOT'])
+				 ? $_SERVER['DOCUMENT_ROOT'].\DIRECTORY_SEPARATOR.'webfan.setup.php'
+				 : OIDplus::localpath().'webfan.setup.php';	
 		//if(!is_dir(dirname($webfatFile))){
 		//  mkdir(dirname($webfatFile), 0775, true);	
 	//	}
