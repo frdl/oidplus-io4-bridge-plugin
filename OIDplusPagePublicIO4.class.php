@@ -26,7 +26,9 @@ use ViaThinkSoft\OIDplus\OIDplusException;
 use ViaThinkSoft\OIDplus\OIDplusPagePluginPublic;
 use ViaThinkSoft\OIDplus\OIDplusNotification;
 use ViaThinkSoft\OIDplus\OIDplusPagePluginAdmin;
- 
+use ViaThinkSoft\OIDplus\OIDplusConfig;
+	
+	
 use ViaThinkSoft\OIDplus\OIDplusGui;
 use ViaThinkSoft\OIDplus\OIDplusPagePublicAttachments;
 
@@ -103,6 +105,11 @@ use ActivityPub\Config\ActivityPubConfig;
 
 use ActivityPub\Utils\Logger;
 use Monolog\Logger as MonoLogger;
+	
+use Jobby\Jobby;
+use Opis\Closure\SerializableClosure;
+use Jobby\Exception;
+	
 
 // phpcs:disable PSR1.Files.SideEffects
 \defined('INSIDE_OIDPLUS') or die;
@@ -178,6 +185,360 @@ class OIDplusPagePublicIO4 extends OIDplusPagePluginAdmin //OIDplusPagePluginPub
 		$this->schemaCacheDir = OIDplus::baseConfig()->getValue('SCHEMA_CACHE_DIRECTORY', OIDplus::localpath().'userdata/cache/' );
 		$this->schemaCacheExpires = OIDplus::baseConfig()->getValue('SCHEMA_CACHE_EXPIRES', 60 * 60 );		
 	}				
+			
+				   
+				   
+				   
+	protected static $ob_privacy_set = false;
+				   
+	protected function ob_privacy(){
+		if(true === static::$ob_privacy_set){
+		   return;	
+		}
+		static::$ob_privacy_set = true;
+		
+		ob_start([$this, 'ob_privacy_handler']);
+	}
+				   
+	public function ob_privacy_handler(string $content) : string {
+		if(1 === intval(OIDplus::baseConfig()->getValue('FRDLWEB_PRIVACY_HIDE_MAILS', 1 ) )
+		   && !OIDplus::authUtils()->isAdminLoggedIn() 
+		  ){
+           $content  = $this->privacy_protect_mails($content);			
+		}
+		return $content;
+	}
+
+	public function privacy_protect_mails($content){
+	//	$m = $this->parse_mail_addresses($content);
+		//$content .= print_r($this->parse_mail_addresses($content), true);
+		$mails = $this->parse_mail_addresses($content);
+		foreach($mails as $num => $m){
+		//	print_r($m);
+			if( OIDplus::baseConfig()->getValue('FRDLWEB_ALIAS_PROVIDER', 'alias.webfan.de' ) !== $m['provider']			  
+			    && !OIDplus::authUtils()->isRALoggedIn($m['handle']) 			   
+			  ) {
+			     $replace = 'PIDH'.str_pad(strlen($m['handle']), 4, "0", \STR_PAD_LEFT).'-'.sha1($m['handle'])
+				 . '@alias.webfan.de';
+		    	$content = str_replace($m['handle'], $replace, $content);
+				
+			}
+		}
+		return $content;
+	}
+				   
+				   
+	public function parse_mail_addresses($string){
+       preg_match_all(<<<REGEXP
+/(?P<email>((?P<account>[\._a-zA-Z0-9-]+)@(?P<provider>[\._a-zA-Z0-9-]+)))/xsi
+REGEXP, $string, $matches, \PREG_PATTERN_ORDER);
+		
+		$ext = [];
+		foreach($matches[0] as $k => $v){						
+		//	$ext[$matches['email'][$k]] =[
+			$ext[] =[
+				'handle'=>$matches['email'][$k],
+				'account'=>$matches['account'][$k],
+				'provider'=>$matches['provider'][$k],
+				
+			];
+		}
+      return $ext;
+   }							   
+				   
+				   
+	public static function cronjobGetJobbyTasksFromPlugins($Jobby = null){
+		
+		$jobby = null !== $Jobby ? $Jobby : new Jobby();
+		
+		foreach(OIDplus::getAllPlugins() as $pkey => $plugin){
+		
+			if(method_exists($plugin, 'cronjobJobbyPrepareTasks')){
+				$jobby = \call_user_func_array([$plugin, 'cronjobJobbyPrepareTasks'], [$jobby]);
+			}
+		}
+		
+		return $jobby;
+	}				   
+				   
+    public static function cronjobGetJobbyTasksFromTable($Jobby = null){ 
+
+		$jobby = null !== $Jobby ? $Jobby : new Jobby();
+		
+		$res = OIDplus::db()->query("select * from ###cron_and_jobs WHERE enabled = 1");
+		
+		//$res->naturalSortByField('id');
+		while ($job = $res->fetch_array()) {
+           $job = array_filter($job);
+           $job['closure'] = unserialize($job['command']);
+           $jobName = $job['name'];
+           unset($job['name']);
+   
+			try {       
+				$jobby->add($jobName, $job);  
+			} catch (\Exception $e) {    
+				error_log($e->getMessage(), 0);
+			}		 		
+		}
+		 
+	  return $jobby;
+	}
+				   
+	public function cronjobRunJobby($Jobby = null){
+		$jobby = null !== $Jobby ? $Jobby : new Jobby();
+		
+		$jobby = static::cronjobGetJobbyTasksFromPlugins($jobby);
+		$jobby = static::cronjobGetJobbyTasksFromPlugins($jobby);
+		
+		$jobby->run();	
+		
+	   return $jobby;	
+	}
+
+	public function init($html = true) {
+       //  $app = $this->getApp();
+		 //  $this->getWebfat(true, false); 	   
+				
+
+		
+		OIDplus::config()->prepareConfigKey('FRDLWEB_PRIVACY_HIDE_MAILS', 
+												'Privacy Mail Protection Addon (1=default active)',
+												'1', OIDplusConfig::PROTECTION_EDITABLE, function ($value) {
+		        $value = intval($value);
+			 	OIDplus::baseConfig()->setValue('FRDLWEB_RDAP_PRIVACY_HIDE_MAILS', $value );
+		});		
+		
+		OIDplus::config()->prepareConfigKey('FRDLWEB_ALIAS_PROVIDER', 
+												'Alias Service Provider Domain (e.g.: "alias.webfan.de"). Alias and privacy service (e.g. mail-hashes for privacy and relation-mappings)',
+												'alias.webfan.de', OIDplusConfig::PROTECTION_EDITABLE, function ($value) {
+ 
+			 	OIDplus::baseConfig()->setValue('FRDLWEB_ALIAS_PROVIDER', $value );
+		});				
+		
+		
+		OIDplus::config()->prepareConfigKey('FRDLWEB_CONTAINER_REMOTE_SERVER_RELATIVE_BASE_URI', 
+												'Uri relative to the OIDplus webBase to serve as endpoint for the container server https://packages.frdl.de/webfan/container-remote-server/archive/main.zip',
+												'api/v1/io4/remote-container/'
+											.OIDplus::baseConfig()->getValue('TENANT_OBJECT_ID_OID', 
+											OIDplus::baseConfig()->getValue('TENANT_REQUESTED_HOST', 'webfan/website' ) ) 
+											
+											, OIDplusConfig::PROTECTION_EDITABLE, function ($value) {
+ 
+			 	OIDplus::baseConfig()->setValue('FRDLWEB_CONTAINER_REMOTE_SERVER_RELATIVE_BASE_URI', $value );
+		});				
+		
+		
+		OIDplus::config()->prepareConfigKey('FRDLWEB_INSTALLER_REMOTE_SERVER_RELATIVE_BASE_URI', 
+												'Uri relative to the OIDplus webBase to serve as endpoint for the container server https://packages.frdl.de/webfan/installer-remote-server/archive/main.zip',
+												'api/v1/io4/remote-installer/'
+											.OIDplus::baseConfig()->getValue('TENANT_OBJECT_ID_OID', 
+											OIDplus::baseConfig()->getValue('TENANT_REQUESTED_HOST', 'webfan/website' ) ) 
+											
+											, OIDplusConfig::PROTECTION_EDITABLE, function ($value) {
+ 
+			 	OIDplus::baseConfig()->setValue('FRDLWEB_INSTALLER_REMOTE_SERVER_RELATIVE_BASE_URI', $value );
+		});				
+				
+		
+		if (!OIDplus::db()->tableExists("###cron_and_jobs")) {
+			if (OIDplus::db()->getSlang()->id() == 'mysql') {
+				OIDplus::db()->query("CREATE TABLE IF NOT EXISTS ###cron_and_jobs
+(`name` VARCHAR(255) NOT NULL ,
+ `command` TEXT NOT NULL ,
+ `schedule` VARCHAR(255) NOT NULL ,
+ `mailer` VARCHAR(255) NULL DEFAULT 'sendmail' ,
+ `maxRuntime` INT UNSIGNED NULL ,
+ `smtpHost` VARCHAR(255) NULL ,
+ `smtpPort` SMALLINT UNSIGNED NULL ,
+ `smtpUsername` VARCHAR(255) NULL ,
+ `smtpPassword` VARCHAR(255) NULL ,
+ `smtpSender` VARCHAR(255) NULL DEFAULT 'jobby@localhost' ,
+ `smtpSenderName` VARCHAR(255) NULL DEFAULT 'Jobby' ,
+ `smtpSecurity` VARCHAR(20) NULL ,
+ `runAs` VARCHAR(255) NULL ,
+ `environment` TEXT NULL ,
+ `runOnHost` VARCHAR(255) NULL ,
+ `output` VARCHAR(255) NULL ,
+ `dateFormat` VARCHAR(100) NULL DEFAULT 'Y-m-d H:i:s' ,
+ `enabled` BOOLEAN NULL DEFAULT TRUE ,
+ `haltDir` VARCHAR(255) NULL , `debug` BOOLEAN NULL DEFAULT FALSE ,
+ PRIMARY KEY (`name`)
+)");
+				$this->db_table_exists = true;
+			} else if (OIDplus::db()->getSlang()->id() == 'mssql') {
+				// We use nvarchar(225) instead of varchar(255), see https://github.com/frdl/oidplus-plugin-alternate-id-tracking/issues/18
+				// Unfortunately, we cannot use nvarchar(255), because we need two of them for the primary key, and an index must not be greater than 900 bytes in SQL Server.
+				// Therefore we can only use 225 Unicode characters instead of 255.
+				// It is very unlikely that someone has such giant identifiers. But if they do, then saveAltIdsForQuery() will reject the INSERT commands to avoid that an SQL Exception is thrown.
+				OIDplus::db()->query("CREATE TABLE IF NOT EXISTS ###cron_and_jobs
+([name] nvarchar(255) NOT NULL ,
+ [command] TEXT NOT NULL ,
+ [schedule] nvarchar(255) NOT NULL ,
+ [mailer] nvarchar(255) NULL DEFAULT 'sendmail' ,
+ [maxRuntime] int UNSIGNED NULL ,
+ [smtpHost] nvarchar(255) NULL ,
+ [smtpPort] SMALLINT UNSIGNED NULL ,
+ [smtpUsername] nvarchar(255) NULL ,
+ [smtpPassword] nvarchar(255) NULL ,
+ [smtpSende] nvarchar(255) NULL DEFAULT 'jobby@localhost' ,
+ [smtpSenderName] nvarchar(255) NULL DEFAULT 'Jobby' ,
+ [smtpSecurity] nvarchar(20) NULL ,
+ [runAs] nvarchar(255) NULL ,
+ [environment] TEXT NULL ,
+ [runOnHost] nvarchar(255) NULL ,
+ [output] nvarchar(255) NULL ,
+ [dateFormat] nvarchar(100) NULL DEFAULT 'Y-m-d H:i:s' ,
+ [enabled] BOOLEAN NULL DEFAULT TRUE ,
+ [haltDir] nvarchar(255) NULL , [debug] BOOLEAN NULL DEFAULT FALSE ,
+ CONSTRAINT [PK_###cron_and_jobs] PRIMARY KEY ( [name] )
+)");
+				$this->db_table_exists = true;
+			} else if (OIDplus::db()->getSlang()->id() == 'oracle') {
+				// TODO: Implement Table Creation for this DBMS (see CREATE TABLE syntax at plugins/viathinksoft/sqlSlang/oracle/sql/*.sql)
+				$this->db_table_exists = false;
+			} else if (OIDplus::db()->getSlang()->id() == 'pgsql') {
+				// TODO: Implement Table Creation for this DBMS (see CREATE TABLE syntax at plugins/viathinksoft/sqlSlang/pgsql/sql/*.sql)
+				$this->db_table_exists = false;
+			} else if (OIDplus::db()->getSlang()->id() == 'access') {
+				// TODO: Implement Table Creation for this DBMS (see CREATE TABLE syntax at plugins/viathinksoft/sqlSlang/access/sql/*.sql)
+				$this->db_table_exists = false;
+			} else if (OIDplus::db()->getSlang()->id() == 'sqlite') {
+				// TODO: Implement Table Creation for this DBMS (see CREATE TABLE syntax at plugins/viathinksoft/sqlSlang/sqlite/sql/*.sql)
+				$this->db_table_exists = false;
+			} else if (OIDplus::db()->getSlang()->id() == 'firebird') {
+				// TODO: Implement Table Creation for this DBMS (see CREATE TABLE syntax at plugins/viathinksoft/sqlSlang/firebird/sql/*.sql)
+				$this->db_table_exists = false;
+			} else {
+				// DBMS not supported
+				$this->db_table_exists = false;
+			}
+		} else {
+			$this->db_table_exists = true;
+		}		
+		
+		
+		
+		if(!is_dir(__DIR__.\DIRECTORY_SEPARATOR.'installer-server'.\DIRECTORY_SEPARATOR) 
+		   || !file_exists(__DIR__.\DIRECTORY_SEPARATOR.'installer-server'.\DIRECTORY_SEPARATOR.'composer.json') 
+		  ){
+			$this->archiveDownloadTo(__DIR__.\DIRECTORY_SEPARATOR.'installer-server'.\DIRECTORY_SEPARATOR,
+									 'https://packages.frdl.de/webfan/installer-remote-server/archive/main.zip' );			
+		}
+		
+		if(!is_dir(__DIR__.\DIRECTORY_SEPARATOR.'container-server'.\DIRECTORY_SEPARATOR) 
+		   || !file_exists(__DIR__.\DIRECTORY_SEPARATOR.'container-server'.\DIRECTORY_SEPARATOR.'composer.json')  ){
+			$this->archiveDownloadTo(__DIR__.\DIRECTORY_SEPARATOR.'container-server'.\DIRECTORY_SEPARATOR,
+									 'https://packages.frdl.de/webfan/container-remote-server/archive/main.zip' );
+		}		
+			
+		if(true === $html){
+		   $this->ob_privacy();	
+		}elseif(false === $html 
+				&& (
+					'cli' === strtolower(substr(\php_sapi_name(), 0, 3)) 
+					 || str_contains($_SERVER['REQUEST_URI'], '/cron.')
+					)
+			   ){
+		   $this->cronjobRunJobby();	
+		}
+		
+	}//init
+	
+  
+	public function archiveDownloadTo(string $dir, string $archiveUrl ){
+		if(!is_dir($dir)){
+		  mkdir($dir, 0775, true);	
+		}
+		
+			$file =$dir. "package.zip";
+   
+		if(!file_exists($file)){	
+			file_put_contents($file, fopen($archiveUrl, 'r'));  
+		}		
+		
+		
+		$path = pathinfo(realpath($file), \PATHINFO_DIRNAME); // get the absolute path to $file (leave it as it is)
+
+	  $zip = new \ZipArchive;
+	  $res = $zip->open($file);
+
+	if ($res === TRUE) {
+	  $zip->extractTo($path);
+	  $zip->close();
+
+	//  echo "<strong>$file</strong> extracted to <strong>$path</strong><br>";
+	  if (file_exists($dir.\DIRECTORY_SEPARATOR.'composer.json') ) { 
+		  unlink($file);
+	  } else {
+	//	  echo "remember to delete <strong>$file</strong> & <strong>$script</strong>!";
+	  }
+	
+	 
+ 	} else {
+	 // echo "Couldn't open $file";
+		error_log(sprintf("Couldn't open %s in %s", $file, __METHOD__), 0);
+	}
+		
+	}//archiveDownloadTo
+				   
+				   
+				   
+
+	public function getWebfat(bool $load = true, bool $serveRequest = false) {
+
+	     if(null === $this->StubRunner){
+			 
+		   $webfatFile =$this->getWebfatFile();
+			 
+			 if(!is_dir(dirname($webfatFile)) && dirname($webfatFile) !== $_SERVER['DOCUMENT_ROOT']){
+				mkdir(dirname($webfatFile), 0775, true); 
+			 }
+		 require_once __DIR__.\DIRECTORY_SEPARATOR.'autoloader.php';
+			 
+			$getter = new ( \IO4\Webfat::getWebfatTraitSingletonClass() );
+			 $getter->setStubDownloadUrl(\Frdlweb\OIDplus\OIDplusPagePublicIO4::WebfatDownloadUrl);
+	    	$this->StubRunner = $getter->getWebfat($webfatFile,
+														 $load 
+														 && OIDplus::baseConfig()->getValue('IO4_ALLOW_AUTOLOAD_FROM_REMOTE', true )
+														 , $serveRequest,
+														2592000,
+														$getter::$_stub_download_url );
+	    }
+		
+		return $this->StubRunner;
+	} 
+				   
+	public function getWebfatFile() {	 
+	    // $webfatFile =OIDplus::localpath().'webfan.setup.php';	
+	 //	$webfatFile =__DIR__.\DIRECTORY_SEPARATOR.'webfan-website'.\DIRECTORY_SEPARATOR.'webfan.setup.php';	
+			$webfatFile =is_writable($_SERVER['DOCUMENT_ROOT'])
+				 ? $_SERVER['DOCUMENT_ROOT'].\DIRECTORY_SEPARATOR.'webfan.setup.php'
+				 : OIDplus::localpath().'webfan.setup.php';	
+		//if(!is_dir(dirname($webfatFile))){
+		//  mkdir(dirname($webfatFile), 0775, true);	
+	//	}
+	     return $webfatFile;
+	} 				   
+
+	public function getWebfatSetupLink(){
+           return OIDplus::webpath(dirname($this->getWebfatFile()),true).basename($this->getWebfatFile());
+	}
+				   
+   
+				   
+
+	public function handleFallbackRoutes($REQUEST_URI, $request, $rel_url_original, $rel_url, $requestMethod){
+	 //   var_dump($REQUEST_URI, $request, $rel_url_original, $rel_url, $requestMethod);
+	//	die();
+		//$uri = explode('?', $REQUEST_URI, 2)[0];
+		//$file = OIDplus::localpath().$uri;
+		//if(file_exists($file)){
+		//  die($file);	
+		//}
+		return false;
+	}
+				   
+				   
 				   
 	protected function composer(){
 	  if(null === $this->composerUI){
@@ -821,8 +1182,10 @@ class OIDplusPagePublicIO4 extends OIDplusPagePluginAdmin //OIDplusPagePluginPub
 				   
 				   
 				   
-				   
+		   
 	public function modifyContent($id, &$title, &$icon, &$text) {
+		$text = $this->ob_privacy_handler($text);
+		
 		$content = '';
 		$CRUD = '';
 
@@ -875,6 +1238,7 @@ class OIDplusPagePublicIO4 extends OIDplusPagePluginAdmin //OIDplusPagePluginPub
 	
 
    public function gui(string $id, array &$out, bool &$handled) {
+	   	$out['text'] = $this->ob_privacy_handler($out['text']);
 		$parts = explode('$',$id,2);
 		$id = $parts[0];
 		$ra_email = $parts[1] ?? null/*no filter*/;
@@ -962,336 +1326,6 @@ class OIDplusPagePublicIO4 extends OIDplusPagePluginAdmin //OIDplusPagePluginPub
 		return true;
 	}
 
-	public function init($html = true) {
-       //  $app = $this->getApp();
-		 //  $this->getWebfat(true, false); 	   
-	}
-			
-				   
-				   
-	/*
-	public function setStubDownloadUrl(string $url)
-    {
-        $class = static::getWebfatTraitSingletonClass();
-         $class::$_stub_download_url = $url;
-    }
-
-    public function getWebfat(
-        string $file = null,
-        bool $load = true,
-        bool $serveRequest = false,
-        bool|int $autoupdate = 2592000,
-        ?string $download_url = null,
-    )
-	*/
-	public function getWebfat(bool $load = true, bool $serveRequest = false) {
-
-		$webfatFile =$this->getWebfatFile();
-	     if(null === $this->StubRunner){
-			 if(!is_dir(dirname($webfatFile)) && dirname($webfatFile) !== $_SERVER['DOCUMENT_ROOT']){
-				mkdir(dirname($webfatFile), 0775, true); 
-			 }
-		 require_once __DIR__.\DIRECTORY_SEPARATOR.'autoloader.php';
-			 
-			$getter = new ( \IO4\Webfat::getWebfatTraitSingletonClass() );
-			 $getter->setStubDownloadUrl(\Frdlweb\OIDplus\OIDplusPagePublicIO4::WebfatDownloadUrl);
-	    	$this->StubRunner = $getter->getWebfat($webfatFile,
-														 $load 
-														 && OIDplus::baseConfig()->getValue('IO4_ALLOW_AUTOLOAD_FROM_REMOTE', true )
-														 , $serveRequest,
-														2592000,
-														$getter::$_stub_download_url );
-	    }
-		
-		return $this->StubRunner;
-	} 
-				   
-	public function getWebfatFile() {	 
-	    // $webfatFile =OIDplus::localpath().'webfan.setup.php';	
-	 //	$webfatFile =__DIR__.\DIRECTORY_SEPARATOR.'webfan-website'.\DIRECTORY_SEPARATOR.'webfan.setup.php';	
-			$webfatFile =is_writable($_SERVER['DOCUMENT_ROOT'])
-				 ? $_SERVER['DOCUMENT_ROOT'].\DIRECTORY_SEPARATOR.'webfan.setup.php'
-				 : OIDplus::localpath().'webfan.setup.php';	
-		//if(!is_dir(dirname($webfatFile))){
-		//  mkdir(dirname($webfatFile), 0775, true);	
-	//	}
-	     return $webfatFile;
-	} 				   
-
-	public function getWebfatSetupLink(){
-           return OIDplus::webpath(dirname($this->getWebfatFile()),true).basename($this->getWebfatFile());
-	}
-				   
-			
-				   
-				   
-				   
-				   
-				   
-	//deprecte and rewrite todo!			   
-	public function loadWebApp(StubHelperInterface | WebAppInterface | StubRunnerInterface $payload,
-							   bool $serveRequest = false) : WebAppInterface {
-		if($payload instanceof WebAppInterface){
-			$AppLauncher =$payload;
-		}elseif($payload instanceof StubRunnerInterface){
-			$AppLauncher = new \Webfan\AppLauncherWebfatInstaller($payload); 
-		}elseif($payload instanceof StubHelperInterface){
-			$AppLauncher = new \Webfan\AppLauncherWebfatInstaller($payload->getRunner()); 
-		}else{
-			throw new InvalidArgumentException(sprintf('Invalid parameter in %s payload of %s given but %s expected',
-													  __METHOD__,
-													  is_object($payload) && !is_null($paylod) ? \get_class($payload) : gettype($payload),
-													  'one of StubHelperInterface | WebAppInterface | StubRunnerInterface'));
-		}
-	 
-
-    if(true === $serveRequest && \method_exists($AppLauncher, 'launch')){
-	   $AppLauncher->launch();
-	}elseif(true === $serveRequest && !$AppLauncher->KernelFunctions()->isCLI() ){
-		   $response = $AppLauncher->handle($AppLauncher->getContainer()->get('request'));
-		   if(is_object($response) && $response instanceof \Psr\Http\Message\ResponseInterface){ 
-			   (new \Laminas\HttpHandlerRunner\Emitter\SapiEmitter)->emit($response);
-		   }
-	   }elseif(true === $serveRequest && $AppLauncher->KernelFunctions()->isCLI() ){
-		 return $AppLauncher->handleCliRequest();
-	   }elseif(true === $serveRequest){
-	     throw new \Exception('Could not handle request ('.\PHP_SAPI.')');	
-       }	
-		return $AppLauncher;
-	}		   
-				   
-	//deprecte and rewrite todo!			   
- 	public function getApp() : WebAppInterface {
-		if(null === $this->AppLauncher){			
-			$this->AppLauncher = $this->loadWebApp( $this->getWebfat(true, false) );
-	        $this->AppLauncher->boot();
-            $this->l()->withWebfanWebfatDefaultSettings();
-		}
-		return $this->AppLauncher;
-	}
-	//deprecte and rewrite todo!			   
-    public function l()  : ClassLoaderInterface  {
-			return $this->getApp()->getContainer()->get('app.runtime.autoloader.remote');
-	}	
-	//deprecte and rewrite todo!			   
-    public function c()  : ContainerInterface  {
-			return $this->getApp()->getContainer();
-	}			
-	//deprecte and rewrite todo!			   
- 	public function getContainer() : ContainerInterface {
- 
-	    	if( ! $this->_containerDeclared ){	
-				$this->_containerDeclared=true;
-
-		
-				$this->c()->factory('router.builder.main.decorated', function( ContainerInterface $container, $router = null ) {
-					$router->group('/', function (\League\Route\RouteGroup $route) { 
-				
-						$route->map('GET', '/test/{path}', 
-							 function(  \Psr\Http\Message\ServerRequestInterface $request,
-									  array $args
-									//  ,\ActivityPub\ActivityPub $activitypub
-									  ,  ContainerInterface $container
-									 ){
-								
-								 
-								  $contents = '';
-								  $contents.="Tester::test('hallo')";
-								  $response = new Response(200);            
-								  $response =  $response->withBody(\GuzzleHttp\Psr7\Utils::streamFor($contents));
-								 //$response =$activitypub->handle($request);
-								 return $response;						
-							 })
-					->setName('oidplus.test.get');	
-						
-						
-					$route->map('GET', '/@{path}', 
-							 function(  \Psr\Http\Message\ServerRequestInterface $request,
-									  array $args
-									//  ,\ActivityPub\ActivityPub $activitypub
-									 ){
-								  $contents = '';
-								  $contents.='ToDo admin...';
-								  $response = new Response(200);            
-								  $response =  $response->withBody(\GuzzleHttp\Psr7\Utils::streamFor($contents));
-								 //$response =$activitypub->handle($request);
-								 return $response;						
-							 })
-					->setName('oidplus.federation.wildcardpath.get');	
-					
-					 
-					
-				$route->map('GET', '/download/{file}/{namespace}/{object}', 
-							 function(  \Psr\Http\Message\ServerRequestInterface $request,
-									  array $args
-									//  ,\ActivityPub\ActivityPub $activitypub
-									 ){
-								 
-	
-	if (OIDplus::baseConfig()->getValue('DISABLE_PLUGIN_ViaThinkSoft\OIDplus\OIDplusPagePublicAttachments', false)) {
-		throw new OIDplusException(_L('This plugin (Attachments) was disabled by the system administrator but is recommended by IO4!'));
-	}							 
- 
-          $id = str_replace('~~~', '/', urldecode($args['namespace']).':'.urldecode($args['object']));
-								 		
-		  $obj = OIDplusObject::findFitting($id);
-				
-			if (!$obj) {
-				$obj = OIDplusObject::parse($id);
-			}
-			/*	*/
-				
-	    	if (!$obj) {
-               // http_response_code(404);
-				$e = new OIDplusException(_L('The object does not exist'));
-				return OIDplusPagePublicIO4::out_html($e->getMessage(), 404);	
-			}
-try {
-	 
-	$filename = $args['file'];
-	if (strpos($filename, '/') !== false) throw new OIDplusException(_L('Illegal file name'));
-	if (strpos($filename, '\\') !== false) throw new OIDplusException(_L('Illegal file name'));
-	if (strpos($filename, '..') !== false) throw new OIDplusException(_L('Illegal file name'));
-	if (strpos($filename, chr(0)) !== false) throw new OIDplusException(_L('Illegal file name'));
-
- 
-
-	$uploaddir = OIDplusPagePublicAttachments::getUploadDir($id);
-	$local_file = $uploaddir.'/'.$filename;
-
-	if (!file_exists($local_file)) {
-		http_response_code(404);
-		throw new OIDplusException(_L('The file does not exist'));
-	}
-	
-     
-	\VtsBrowserDownload::output_file($local_file, '', 1);
-} catch (\Exception $e) {
-	$htmlmsg = $e instanceof OIDplusException ? $e->getHtmlMessage() : htmlentities($e->getMessage());
-	echo '<h1>Download-'._L('Error').'</h1><p>'.$htmlmsg.'<p>';
-}
-								exit;						
-							 })
-					->setName('download.file.get');	
-						
-						
-						
-				})
-				//->middleware(new MyWaynieeMiddleware)
-				;	
-					
-					return $router;
-				 });
-				
-							
-				
-			}//$this->_containerDeclared
-		
-		
-		return $this->c();
-	}
-				   
-				 
-   //deprecte and rewrite todo!
- 	public function handle(ServerRequestInterface $request) : ResponseInterface
-	{		
-	   $app = $this->getApp();
-	   $app->boot();
- 
-			$origin = $request->getHeader('Origin');
- 
-
-	if(  $this->getContainer()->has('router') ){	
-		
-		 
-		$path = $request->getUri()->getPath();//$this->getContainer()->get('request')->getUri()->getPath();
-		$method =$request->getMethod();//$this->getContainer()->get('request')->getMethod();
-		
-		$homeRoute = 'home.'.strtolower($method);
-		if(!$app->hasRoute($homeRoute) && $method !== 'GET'){
-			$homeRoute = 'home.post';
-		}
-		
-		 
-		if('/'===$path && $path !== $this->getContainer()->get('params.webroot.uri') && $app->hasRoute($homeRoute)  ){
-			$response = $this->getContainer()->get('response');
-			$response =  $response->withHeader('Location', $app->getRoute($homeRoute,  []) );	
-		    $response = $response->withStatus(302);
-			return $response;
-		}//  / = $path
-		
-		
-		try{
-		  $router = $this->getContainer()->get('router');
-		  $response = $router->dispatch($request);
-		   $response = $response->withStatus(200);
-		}catch(\League\Route\Http\Exception\NotFoundException $e){
-		//	die($e->getMessage());
-		     $response = new Response(404);
-          //   $response =  $response->withBody(\GuzzleHttp\Psr7\Utils::streamFor( $this->_patch_index( '404.html') ));		
-			$response =  $response->withBody(\GuzzleHttp\Psr7\Utils::streamFor( 
-				//$this->_patch_index( 'template.404.php')
-				'Not found: <br />'
-				. $method.'<br />'
-				 .$path.'<br />'
-				. $response->getStatusCode() .'<br />'
-				. ((string) $response->getBody()).'<br />'
-				. ($app->hasRoute('oidplus.federation.wildcardpath.get')
-				  ? $app->getRoute('oidplus.federation.wildcardpath.get', [
-					    'path' => '2.999',
-					  ]) 
-			//	   .(print_r((new \Webfan\Webfat\App\KernelFunctions)->getNetRequest(),true))
-				  : ' - Not registered: oidplus.federation.wildcardpath.get')
-			));		
-		   $response = $response->withStatus(404);
-		}catch(\Exception $e){
-		     $response = new Response(500);
-             $response =  $response->withBody(
-				 \GuzzleHttp\Psr7\Utils::streamFor( '<h1>Request-Error</h1>['.$method.' '.$path.']<error>'. $e->getMessage().'</error>')
-			 );				
-		   $response = $response->withStatus(500);
-		}
-		
-			if(is_string($response)){
-	           $response2 = new Response(200);
-               $response =  $response2->withBody(\GuzzleHttp\Psr7\Utils::streamFor($response));			
-			}
-	}else{//$this->hasContainer()
-		     $response = new Response(404);
-             $response =  $response->withBody(\GuzzleHttp\Psr7\Utils::streamFor( 
-				 '<h1>Not found</h1>'																				
-				 .'There is no container available which has a router!'
-			     .' - You should continue the installation!'										   
-			 ));			
-		   $response = $response->withStatus(404);
-	}
-		
-	    if($origin){
-			$response =  $response->withHeader('Access-Control-Allow-Origin', $origin);	
-		}else{
-           $response = $response->withHeader('Access-Control-Allow-Origin', '*');	
-		}
-
-			
-		$ConentType = $app->getResponseHeader('Content-Type', $response);
-		if(false === $ConentType || 'text/html' === $ConentType){
-		  $contents = (string) $response->getBody();
-	//	  $contents = $this->patch_ob_handler($this->Document->compile($contents));
-		  $contents = $app->Document->compile($contents);
-		  $response =  $response->withBody(\GuzzleHttp\Psr7\Utils::streamFor($contents));
-		}	
-		
-		
-		return $response;
-	}			   
-				   
-				   
-
-	public function handleFallbackRoutes($rel_url){
-	
-		return false;
-	}
-				   
 				   
     public static function out_html(string $html, ?int $code = 200, $callback = null, ?array $templateVars = []){			
 		$contents = '';							
@@ -1330,7 +1364,8 @@ try {
 							    exit;
 							  break;
 					  }
-				 }elseif(!is_null($next) && is_array($next) || is_object($next) ){								
+					
+				 }elseif(!is_null($next) && (is_array($next) || is_object($next)  )){								
 					OIDplus::invoke_shutdown();		
 					@header('Content-Type:application/json; charset=utf-8');			
 					echo json_encode($next);			
@@ -1349,14 +1384,52 @@ try {
      *  @ToDO ??? : Use PSR Standards? https://registry.frdl.de/?goto=php%3APsr%5CHttp%5CServer
 	 */
 	public function handle404(string $request): bool {
+		
+		
+		if (str_starts_with($request, OIDplus::baseConfig()->getValue('FRDLWEB_INSTALLER_REMOTE_SERVER_RELATIVE_BASE_URI', 
+																			'api/v1/io4/remote-installer/'
+											.OIDplus::baseConfig()->getValue('TENANT_OBJECT_ID_OID', 
+											OIDplus::baseConfig()->getValue('TENANT_REQUESTED_HOST', 'webfan/website' ) ) 
 
-		if (!isset($_SERVER['REQUEST_URI']) || !isset($_SERVER["REQUEST_METHOD"])) return false;
+																			))
+		   
+		   ) {
+			if(file_exists(__DIR__.\DIRECTORY_SEPARATOR.'installer-server'.\DIRECTORY_SEPARATOR.'index.web.php') ){
+				  require __DIR__.\DIRECTORY_SEPARATOR.'installer-server'.\DIRECTORY_SEPARATOR.'index.web.php';
+			//	return true;
+				  die();		
+			}
+		}	
+		
+
+		
+			if (str_starts_with($request, OIDplus::baseConfig()->getValue('FRDLWEB_CONTAINER_REMOTE_SERVER_RELATIVE_BASE_URI', 
+																			'api/v1/io4/remote-container/'
+											.OIDplus::baseConfig()->getValue('TENANT_OBJECT_ID_OID', 
+											OIDplus::baseConfig()->getValue('TENANT_REQUESTED_HOST', 'webfan/website' ) ) 
+
+
+																			))
+		   
+		   ) {
+			if(file_exists(__DIR__.\DIRECTORY_SEPARATOR.'container-server'.\DIRECTORY_SEPARATOR.'index.php') ){
+				  require __DIR__.\DIRECTORY_SEPARATOR.'container-server'.\DIRECTORY_SEPARATOR.'index.php';
+				  die();		
+				//return true;
+			}
+		}	
+			
+		
+		
+		
+		if (!isset($_SERVER['REQUEST_URI']) || !isset($_SERVER["REQUEST_METHOD"])) return false; 
+		
 		$rel_url = false;
 		$rel_url_original =substr($_SERVER['REQUEST_URI'], strlen(OIDplus::webpath(null, OIDplus::PATH_RELATIVE_TO_ROOT)));
 		$requestMethod = $_SERVER["REQUEST_METHOD"];
         $next = false;
 			
-		 $args = [$rel_url];
+		 $args = [$_SERVER['REQUEST_URI'], $request, $rel_url_original, $rel_url, $requestMethod];
 		$next = \call_user_func_array([$this, 'handleFallbackRoutes'], $args);
 
 		
@@ -1624,6 +1697,39 @@ try {
 	public function restApiInfo(string $kind='html'): string {
 		if ($kind === 'html') {
 			$struct = [
+				
+		
+				_L('@ (ALL METHODS) Installer') => [
+					'<b>Remote-Installer API Server Endpoint</b> '.OIDplus::webpath(null,OIDplus::PATH_ABSOLUTE_CANONICAL).OIDplus::baseConfig()->getValue('FRDLWEB_INSTALLER_REMOTE_SERVER_RELATIVE_BASE_URI', 
+																			'api/v1/io4/remote-installer/'
+											.OIDplus::baseConfig()->getValue('TENANT_OBJECT_ID_OID', 
+											OIDplus::baseConfig()->getValue('TENANT_REQUESTED_HOST', 'webfan/website' ) ) )
+,
+					_L('Input parameters') => [
+						'<i>'._L('None').'</i>'
+					],
+					_L('Output parameters') => [
+						'mixed...'
+					]
+				],
+						
+						_L('@ (ALL METHODS) Container') => [
+					'<b>Remote-Container API Server Endpoint</b> '.OIDplus::webpath(null,OIDplus::PATH_ABSOLUTE_CANONICAL). OIDplus::baseConfig()->getValue('FRDLWEB_CONTAINER_REMOTE_SERVER_RELATIVE_BASE_URI', 
+																			'api/v1/io4/remote-container/'
+											.OIDplus::baseConfig()->getValue('TENANT_OBJECT_ID_OID', 
+											OIDplus::baseConfig()->getValue('TENANT_REQUESTED_HOST', 'webfan/website' ) ) )
+							,
+					_L('Input parameters') => [
+						'<i>'._L('None').'</i>'
+					],
+					_L('Output parameters') => [
+						'mixed...'
+					]
+				],
+						
+						
+				
+				
 				_L('@ Get') => [
 					'<b>GET</b> '.OIDplus::webpath(null,OIDplus::PATH_ABSOLUTE_CANONICAL).'rest/v1/io4/@/<abbr title="'._L('e.g. %1', '@/oid:2.999').'">[id]</abbr>',
 					_L('Input parameters') => [
@@ -1723,7 +1829,7 @@ try {
 	
 
 
-	public function restApiCall(string $requestMethod, string $endpoint, array $json_in) {
+	public function restApiCall(string $requestMethod, string $endpoint, array $json_in) : array|false {
 		 
 		if (str_starts_with($endpoint, 'io4/')) {
 			$id = substr($endpoint, strlen('io4/'));
