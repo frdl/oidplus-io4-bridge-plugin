@@ -22,7 +22,8 @@
 	   "doctrine/cache" : "*",
 	   "knplabs/packagist-api" : "*",
 	   "frdl/oidplus-frdljs-cdn-proxy-plugin" : "*",
-	   "webfan/website" : "*"
+	   "webfan/website" : "*",
+	   "hellogerard/jobby" :"*"
 	   
     }
 }
