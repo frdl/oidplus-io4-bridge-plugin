@@ -43,9 +43,9 @@ $StubRunner = (new \IO4\Webfat)->getWebfat($webfatFile,
      }  
   }
 
-$scope = !empty(getenv('IO4_WORKSPACE_SCOPE')) ? getenv('IO4_WORKSPACE_SCOPE') : getcwd();
- $plugin_root = $scope;
- $traitFile = "{$plugin_root}/lib/classes/Webfan/Webfat/getWebfatTrait.php";
+
+ $plugin_root = __DIR__;
+ $traitFile = "{$plugin_root}/classes/Webfan/Webfat/getWebfatTrait.php";
 
  if (!file_exists($traitFile) || filemtime($traitFile)<30*24*60*60) {
 	// check if composer dependencies are distributed with the plugin
@@ -64,3 +64,8 @@ $scope = !empty(getenv('IO4_WORKSPACE_SCOPE')) ? getenv('IO4_WORKSPACE_SCOPE') :
  }
 
 _installClass(\IO4\Webfat::class); 
+
+			$getter = new ( \IO4\Webfat::getWebfatTraitSingletonClass() );
+			 $getter->setStubDownloadUrl(\Frdlweb\OIDplus\OIDplusPagePublicIO4::WebfatDownloadUrl);
+
+
