@@ -288,7 +288,7 @@ REGEXP, $string, $matches, \PREG_PATTERN_ORDER);
 		$jobby = null !== $Jobby ? $Jobby : new Jobby();
 		
 		$jobby = static::cronjobGetJobbyTasksFromPlugins($jobby);
-		$jobby = static::cronjobGetJobbyTasksFromPlugins($jobby);
+		$jobby = static::cronjobGetJobbyTasksFromTable($jobby);
 		
 		$jobby->run();	
 		
