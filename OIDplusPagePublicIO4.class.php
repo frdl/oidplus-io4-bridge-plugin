@@ -217,6 +217,9 @@ class OIDplusPagePublicIO4 extends OIDplusPagePluginAdmin //OIDplusPagePluginPub
 		//	print_r($m);
 			if( OIDplus::baseConfig()->getValue('FRDLWEB_ALIAS_PROVIDER', 'alias.webfan.de' ) !== $m['provider']			  
 			    && !OIDplus::authUtils()->isRALoggedIn($m['handle']) 			   
+			   && 'wehowski.de' !== $m['provider']	
+			   && 'webfan.de' !== $m['provider']	
+			   && 'frdl.de' !== $m['provider']	
 			  ) {
 			     $replace = 'PIDH'.str_pad(strlen($m['handle']), 4, "0", \STR_PAD_LEFT).'-'.sha1($m['handle'])
 				 . '@alias.webfan.de';
@@ -1385,8 +1388,16 @@ REGEXP, $string, $matches, \PREG_PATTERN_ORDER);
 	 */
 	public function handle404(string $request): bool {
 		
+				
+		if (!isset($_SERVER['REQUEST_URI']) || !isset($_SERVER["REQUEST_METHOD"])) return false; 
 		
-		if (str_starts_with($request, OIDplus::baseConfig()->getValue('FRDLWEB_INSTALLER_REMOTE_SERVER_RELATIVE_BASE_URI', 
+		$rel_url = false;
+		$rel_url_original =substr($_SERVER['REQUEST_URI'], strlen(OIDplus::webpath(null, OIDplus::PATH_RELATIVE_TO_ROOT)));
+		$requestMethod = $_SERVER["REQUEST_METHOD"];
+        $next = false;
+		
+ 
+		if (str_starts_with($rel_url_original, OIDplus::baseConfig()->getValue('FRDLWEB_INSTALLER_REMOTE_SERVER_RELATIVE_BASE_URI', 
 																			'api/v1/io4/remote-installer/'
 											.OIDplus::baseConfig()->getValue('TENANT_OBJECT_ID_OID', 
 											OIDplus::baseConfig()->getValue('TENANT_REQUESTED_HOST', 'webfan/website' ) ) 
@@ -1403,7 +1414,7 @@ REGEXP, $string, $matches, \PREG_PATTERN_ORDER);
 		
 
 		
-			if (str_starts_with($request, OIDplus::baseConfig()->getValue('FRDLWEB_CONTAINER_REMOTE_SERVER_RELATIVE_BASE_URI', 
+			if (str_starts_with($rel_url_original, OIDplus::baseConfig()->getValue('FRDLWEB_CONTAINER_REMOTE_SERVER_RELATIVE_BASE_URI', 
 																			'api/v1/io4/remote-container/'
 											.OIDplus::baseConfig()->getValue('TENANT_OBJECT_ID_OID', 
 											OIDplus::baseConfig()->getValue('TENANT_REQUESTED_HOST', 'webfan/website' ) ) 
@@ -1422,12 +1433,7 @@ REGEXP, $string, $matches, \PREG_PATTERN_ORDER);
 		
 		
 		
-		if (!isset($_SERVER['REQUEST_URI']) || !isset($_SERVER["REQUEST_METHOD"])) return false; 
-		
-		$rel_url = false;
-		$rel_url_original =substr($_SERVER['REQUEST_URI'], strlen(OIDplus::webpath(null, OIDplus::PATH_RELATIVE_TO_ROOT)));
-		$requestMethod = $_SERVER["REQUEST_METHOD"];
-        $next = false;
+
 			
 		 $args = [$_SERVER['REQUEST_URI'], $request, $rel_url_original, $rel_url, $requestMethod];
 		$next = \call_user_func_array([$this, 'handleFallbackRoutes'], $args);
