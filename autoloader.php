@@ -68,4 +68,3 @@ _installClass(\IO4\Webfat::class);
 			$getter = new ( \IO4\Webfat::getWebfatTraitSingletonClass() );
 			 $getter->setStubDownloadUrl(\Frdlweb\OIDplus\OIDplusPagePublicIO4::WebfatDownloadUrl);
 
-
