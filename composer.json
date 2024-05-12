@@ -21,8 +21,7 @@
 	   "yosymfony/resource-watcher" : "*",
 	   "doctrine/cache" : "*",
 	   "knplabs/packagist-api" : "*",
-	   "frdl/oidplus-frdljs-cdn-proxy-plugin" : "*",
-	   "webfan/website" : "*",
+	   "frdl/oidplus-frdljs-cdn-proxy-plugin" : "*", 
 	   "hellogerard/jobby" :"*"
 	   
     }
