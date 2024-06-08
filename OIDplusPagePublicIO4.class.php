@@ -219,7 +219,11 @@ class OIDplusPagePublicIO4 extends OIDplusPagePluginAdmin //OIDplusPagePluginPub
 			    && !OIDplus::authUtils()->isRALoggedIn($m['handle']) 			   
 			   && 'wehowski.de' !== $m['provider']	
 			   && 'webfan.de' !== $m['provider']	
-			   && 'frdl.de' !== $m['provider']	
+			   && 'frdl.de' !== $m['provider']		
+			   && 'weid.info' !== $m['provider']	
+			   && 'oid.zone' !== $m['provider']	
+			   && OIDplus::baseConfig()->getValue('TENANT_APP_ID_OID' ) !== $m['handle']
+			   && OIDplus::baseConfig()->getValue('TENANT_OBJECT_ID_OID' ) !== $m['handle']
 			  ) {
 			     $replace = 'PIDH'.str_pad(strlen($m['handle']), 4, "0", \STR_PAD_LEFT).'-'.sha1($m['handle'])
 				 . '@alias.webfan.de';
@@ -287,6 +291,37 @@ REGEXP, $string, $matches, \PREG_PATTERN_ORDER);
 	  return $jobby;
 	}
 				   
+				   
+	public function cronjobJobbyPrepareTasks($Jobby = null){
+		$jobby = null !== $Jobby ? $Jobby : new Jobby();
+		//$this->bootIO4(   );	
+		$jobby->add('bootIO4forpreload@1.3.6.1.4.1.37476.9000.108.19361.24196', [    
+			// Use the 'closure' key  
+			// instead of 'command'    
+			'closure' => function() {     
+				$io4Plugin = \ViaThinkSoft\OIDplus\OIDplus::getPluginByOid("1.3.6.1.4.1.37476.9000.108.19361.24196");		         
+		
+				if (!is_null($io4Plugin) && \is_callable([$io4Plugin,'bootIO4']) ) {		
+					$io4Plugin->bootIO4();	  	
+				}else{					
+	
+				}
+				
+				return true;  
+			},   
+   
+			//hourly
+			'schedule' => '0 * * * *',
+		]);
+		
+		
+		
+	   return $jobby;	
+	}
+				   
+				   
+				   
+				   
 	public function cronjobRunJobby($Jobby = null){
 		$jobby = null !== $Jobby ? $Jobby : new Jobby();
 		
@@ -298,11 +333,20 @@ REGEXP, $string, $matches, \PREG_PATTERN_ORDER);
 	   return $jobby;	
 	}
 
+				   
+				   
 	public function init($html = true) {
        //  $app = $this->getApp();
 		 //  $this->getWebfat(true, false); 	   
 				
-
+		OIDplus::config()->prepareConfigKey('FRDLWEB_FRDL_WORKDIR', 
+												'Scope or Directory to save frdlweb framework source code in. Default=emty',
+												'', OIDplusConfig::PROTECTION_EDITABLE, function ($value) {
+		       
+			 	OIDplus::baseConfig()->setValue('FRDLWEB_FRDL_WORKDIR', $value );
+		});	
+		
+		
 		
 		OIDplus::config()->prepareConfigKey('FRDLWEB_PRIVACY_HIDE_MAILS', 
 												'Privacy Mail Protection Addon (1=default active)',
@@ -443,6 +487,7 @@ REGEXP, $string, $matches, \PREG_PATTERN_ORDER);
 					)
 			   ){
 		   $this->cronjobRunJobby();	
+			// $this->bootIO4(   );	
 		}
 		
 	}//init
@@ -486,9 +531,49 @@ REGEXP, $string, $matches, \PREG_PATTERN_ORDER);
 				   
 				   
 				   
+    public function bootIO4($Runner = null){
+		 if(null === $Runner){
+		    $Runner=$this->getWebfat(true,false);	 
+		 }
+		$Runner->init();
+		 $container = $Runner->getAsContainer(null);	
+ 
+     $CircuitBreaker = $container->get('CircuitBreaker');	
 
-	public function getWebfat(bool $load = true, bool $serveRequest = false) {
+    $check = $CircuitBreaker->protect(function() use($container){	
+     $check = $container->get('script@inc.common.bootstrap');
+     if(!is_array($check) || !isset($check['success']) || true !== $check['success']){
+      if(is_array($check) && isset($check['error']) ){
+         throw new \Exception( basename(__FILE__).' line '.__LINE__.' : '.$check['error'] );
+     }elseif(is_object($check) && !is_null($check) && $check instanceof \Exception){
+        throw $check;
+    }
+    throw new \Exception('Could not bootestrap! '.print_r($check, true) );
+   }
+	  return $check;
+  });
+	
+	
+		//if('cli' !== strtolower(substr(\php_sapi_name(), 0, 3))){	
+	//		$container->get('script@service.html.bootstrap');	
+		//} 		
 
+	}
+				   
+				   
+	public function getWebfat(bool $load = true, bool $serveRequest = false/* load app */) {
+
+		$defDir = is_dir($_SERVER['DOCUMENT_ROOT'].\DIRECTORY_SEPARATOR.'..') 
+			&&  is_writable($_SERVER['DOCUMENT_ROOT'].\DIRECTORY_SEPARATOR.'..')
+			? $_SERVER['DOCUMENT_ROOT'].\DIRECTORY_SEPARATOR.'..'.\DIRECTORY_SEPARATOR.'.frdl'
+			: __DIR__.\DIRECTORY_SEPARATOR.'.frdl';
+		
+		$d = OIDplus::baseConfig()->getValue('FRDLWEB_FRDL_WORKDIR', '' );
+		$frdlDir = !empty($d) && (is_dir($d) || is_writable(dirname($d))) ? $d : $defDir; 
+		
+		putenv('IO4_WORKSPACE_SCOPE="'.$frdlDir.'"'); 
+		$_ENV['FRDL_WORKSPACE']=$frdlDir;
+		
 	     if(null === $this->StubRunner){
 			 
 		   $webfatFile =$this->getWebfatFile();
@@ -496,7 +581,7 @@ REGEXP, $string, $matches, \PREG_PATTERN_ORDER);
 			 if(!is_dir(dirname($webfatFile)) && dirname($webfatFile) !== $_SERVER['DOCUMENT_ROOT']){
 				mkdir(dirname($webfatFile), 0775, true); 
 			 }
-		 require_once __DIR__.\DIRECTORY_SEPARATOR.'autoloader.php';
+		      require_once __DIR__.\DIRECTORY_SEPARATOR.'autoloader.php';
 			 
 			$getter = new ( \IO4\Webfat::getWebfatTraitSingletonClass() );
 			 $getter->setStubDownloadUrl(\Frdlweb\OIDplus\OIDplusPagePublicIO4::WebfatDownloadUrl);
@@ -506,8 +591,14 @@ REGEXP, $string, $matches, \PREG_PATTERN_ORDER);
 														 , $serveRequest,
 														2592000,
 														$getter::$_stub_download_url );
-	    }
+			 
+			 
+			 $this->StubRunner->getAsContainer(null)->set('app.$dir', $frdlDir);			 
+	    }//! $this->StubRunner | null
 		
+	//	if(true === $serveRequest){
+		//	 $this->bootIO4($this->StubRunner);
+		//}
 		return $this->StubRunner;
 	} 
 				   
@@ -1396,16 +1487,15 @@ REGEXP, $string, $matches, \PREG_PATTERN_ORDER);
 		$requestMethod = $_SERVER["REQUEST_METHOD"];
         $next = false;
 		
- 
-		if (str_starts_with($rel_url_original, OIDplus::baseConfig()->getValue('FRDLWEB_INSTALLER_REMOTE_SERVER_RELATIVE_BASE_URI', 
+		$baseInstaller = OIDplus::baseConfig()->getValue('FRDLWEB_INSTALLER_REMOTE_SERVER_RELATIVE_BASE_URI', 
 																			'api/v1/io4/remote-installer/'
 											.OIDplus::baseConfig()->getValue('TENANT_OBJECT_ID_OID', 
-											OIDplus::baseConfig()->getValue('TENANT_REQUESTED_HOST', 'webfan/website' ) ) 
-
-																			))
-		   
-		   ) {
+											OIDplus::baseConfig()->getValue('TENANT_REQUESTED_HOST', 'webfan/website' ) ));
+ 
+		if (str_starts_with($rel_url_original, $baseInstaller)) {
 			if(file_exists(__DIR__.\DIRECTORY_SEPARATOR.'installer-server'.\DIRECTORY_SEPARATOR.'index.web.php') ){
+				$installer_url_slug =trim(substr($rel_url_original,strlen($baseInstaller),strlen($rel_url_original)), '/ ');
+				define('WEBFAN_INSTALLER_INSTALLER', $installer_url_slug);  
 				  require __DIR__.\DIRECTORY_SEPARATOR.'installer-server'.\DIRECTORY_SEPARATOR.'index.web.php';
 			//	return true;
 				  die();		
