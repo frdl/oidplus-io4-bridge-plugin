@@ -184,24 +184,54 @@ class OIDplusPagePublicIO4 extends OIDplusPagePluginAdmin //OIDplusPagePluginPub
 		
 		$this->schemaCacheDir = OIDplus::baseConfig()->getValue('SCHEMA_CACHE_DIRECTORY', OIDplus::localpath().'userdata/cache/' );
 		$this->schemaCacheExpires = OIDplus::baseConfig()->getValue('SCHEMA_CACHE_EXPIRES', 60 * 60 );		
+		
+		if(!static::is_cli() ){ 
+			$this->ob_privacy();	
+		}
 	}				
 			
-				   
+	public static function is_cli()
+{
+    if ( defined('STDIN') )
+    {
+        return true;
+    }
+
+    if ( php_sapi_name() === 'cli' )
+    {
+        return true;
+    }
+
+    if ( array_key_exists('SHELL', $_ENV) ) {
+        return true;
+    }
+
+    if ( empty($_SERVER['REMOTE_ADDR']) and !isset($_SERVER['HTTP_USER_AGENT']) and count($_SERVER['argv']) > 0) 
+    {
+        return true;
+    } 
+
+    if ( !array_key_exists('REQUEST_METHOD', $_SERVER) )
+    {
+        return true;
+    }
+
+    return false;
+	}			   
 				   
 				   
 	protected static $ob_privacy_set = false;
 				   
-	protected function ob_privacy(){
-		if(true === static::$ob_privacy_set){
+	public function ob_privacy(){
+		if(true === static::$ob_privacy_set && ob_get_level() > 5 ){
 		   return;	
 		}
-		static::$ob_privacy_set = true;
-		
-		ob_start([$this, 'ob_privacy_handler']);
+		static::$ob_privacy_set = true; 
+		ob_start([$this, 'ob_privacy_handler']); 
 	}
 				   
 	public function ob_privacy_handler(string $content) : string {
-		if(1 === intval(OIDplus::baseConfig()->getValue('FRDLWEB_PRIVACY_HIDE_MAILS', 1 ) )
+		if(1 == intval(OIDplus::baseConfig()->getValue('FRDLWEB_PRIVACY_HIDE_MAILS', 1 ) )
 		   && !OIDplus::authUtils()->isAdminLoggedIn() 
 		  ){
            $content  = $this->privacy_protect_mails($content);			
@@ -209,33 +239,47 @@ class OIDplusPagePublicIO4 extends OIDplusPagePluginAdmin //OIDplusPagePluginPub
 		return $content;
 	}
 
-	public function privacy_protect_mails($content){
+				   
+	public static function hashMails($content){
 	//	$m = $this->parse_mail_addresses($content);
 		//$content .= print_r($this->parse_mail_addresses($content), true);
-		$mails = $this->parse_mail_addresses($content);
+		$mails = static::parse_mail_addresses($content);
 		foreach($mails as $num => $m){
 		//	print_r($m);
 			if( OIDplus::baseConfig()->getValue('FRDLWEB_ALIAS_PROVIDER', 'alias.webfan.de' ) !== $m['provider']			  
 			    && !OIDplus::authUtils()->isRALoggedIn($m['handle']) 			   
 			   && 'wehowski.de' !== $m['provider']	
-			   && 'webfan.de' !== $m['provider']	
-			   && 'frdl.de' !== $m['provider']		
+			   && 'webfan.de' !== $m['provider']
 			   && 'weid.info' !== $m['provider']	
 			   && 'oid.zone' !== $m['provider']	
-			   && OIDplus::baseConfig()->getValue('TENANT_APP_ID_OID' ) !== $m['handle']
-			   && OIDplus::baseConfig()->getValue('TENANT_OBJECT_ID_OID' ) !== $m['handle']
+			//   && OIDplus::baseConfig()->getValue('TENANT_APP_ID_OID' ) !== $m['handle']
+			   && 'frdl.de' !== $m['provider']		 
 			  ) {
+				/*
 			     $replace = 'PIDH'.str_pad(strlen($m['handle']), 4, "0", \STR_PAD_LEFT).'-'.sha1($m['handle'])
-				 . '@alias.webfan.de';
+				 . '@'. OIDplus::baseConfig()->getValue('FRDLWEB_ALIAS_PROVIDER', 'alias.webfan.de' );
 		    	$content = str_replace($m['handle'], $replace, $content);
+				*/
 				
+				$Grofil = new \Webfan\Grofil(OIDplus::baseConfig()->getValue('FRDLWEB_ALIAS_PROVIDER', 'alias.webfan.de' ), $m['handle']);
+				$mailto = $Grofil->url($m['handle'], 'webfan', 'mailto', null);
+			
+				$m = explode(':', $mailto, 2);
+				 $replace = $m[1];	
+		//	return($replace.__FILE__.__LINE__);
+				
+				$content = str_replace($m['handle'], $replace, $content);
 			}
 		}
-		return $content;
+		return $content;		
+	}
+				   
+	public function privacy_protect_mails($content){
+	  return static::hashMails($content);
 	}
 				   
 				   
-	public function parse_mail_addresses($string){
+	public static function parse_mail_addresses($string){
        preg_match_all(<<<REGEXP
 /(?P<email>((?P<account>[\._a-zA-Z0-9-]+)@(?P<provider>[\._a-zA-Z0-9-]+)))/xsi
 REGEXP, $string, $matches, \PREG_PATTERN_ORDER);
@@ -332,13 +376,183 @@ REGEXP, $string, $matches, \PREG_PATTERN_ORDER);
 		
 	   return $jobby;	
 	}
-
 				   
+				   
+    public static function handleNext( $next, ?bool $skip404 = true ) {
+				if(is_bool($next)){
+					return $next;
+				}elseif(is_string($next)){
+					$next = static::out_html($next, 200);
+					(new \Laminas\HttpHandlerRunner\Emitter\SapiEmitter)->emit($next);								    
+					exit;
+				}elseif(!is_null($next) && is_object($next) && $next instanceof \Psr\Http\Message\ResponseInterface){ 			   
+					  switch($next->getStatusCode()){
+						  case 404 :
+							  if(!$skip404){
+								  (new \Laminas\HttpHandlerRunner\Emitter\SapiEmitter)->emit($next);	
+							    exit;
+							  }else{
+								  return false;
+							  }
+							  break;
+							 	 
+						  case 302 <= $next->getStatusCode() :
+							   (new \Laminas\HttpHandlerRunner\Emitter\SapiEmitter)->emit($next);	
+							    exit;
+							  break;
+							  
+							  default :
+							    (new \Laminas\HttpHandlerRunner\Emitter\SapiEmitter)->emit($next);	
+							    exit;
+							  break;
+					  }
+					
+				 }elseif(!is_null($next) && (is_array($next) || is_object($next)  )){								
+					OIDplus::invoke_shutdown();		
+					@header('Content-Type:application/json; charset=utf-8');			
+					echo json_encode($next);			
+					exit; 
+				}elseif(is_null($next) ){
+					 return false;
+				}else{
+					return $next;
+				}
+	}
+				   
+				   
+	/** c404=ErrorDocument
+	 * @param string $request
+	 * @return bool
+	 * @throws OIDplusException
+	 *
+     *  @ToDO ??? : Use PSR Standards? https://registry.frdl.de/?goto=php%3APsr%5CHttp%5CServer
+	 */
+	public function handle404(string $request): bool {
+		
+			
+		if(!static::is_cli() ){ 
+			$this->ob_privacy();	
+		}
+		
+		if (!isset($_SERVER['REQUEST_URI']) || !isset($_SERVER["REQUEST_METHOD"])) return false; 
+		
+		$rel_url = false;
+		$rel_url_original =substr($_SERVER['REQUEST_URI'], strlen(OIDplus::webpath(null, OIDplus::PATH_RELATIVE_TO_ROOT)));
+		$requestMethod = $_SERVER["REQUEST_METHOD"];
+        $next = false;
+		
+		$baseInstaller = OIDplus::baseConfig()->getValue('FRDLWEB_INSTALLER_REMOTE_SERVER_RELATIVE_BASE_URI', 
+																			'api/v1/io4/remote-installer/'
+											.OIDplus::baseConfig()->getValue('TENANT_OBJECT_ID_OID', 
+											OIDplus::baseConfig()->getValue('TENANT_REQUESTED_HOST', 'webfan/website' ) ));
+ 
+		if (str_starts_with($rel_url_original, $baseInstaller)) {
+			if(file_exists(__DIR__.\DIRECTORY_SEPARATOR.'installer-server'.\DIRECTORY_SEPARATOR.'index.web.php') ){
+				$installer_url_slug =trim(substr($rel_url_original,strlen($baseInstaller),strlen($rel_url_original)), '/ ');
+				define('WEBFAN_INSTALLER_INSTALLER', $installer_url_slug);  
+				  require __DIR__.\DIRECTORY_SEPARATOR.'installer-server'.\DIRECTORY_SEPARATOR.'index.web.php';
+			//	return true;
+				  die();		
+			}
+		}	
+		
+
+		
+			if (str_starts_with($rel_url_original, OIDplus::baseConfig()->getValue('FRDLWEB_CONTAINER_REMOTE_SERVER_RELATIVE_BASE_URI', 
+																			'api/v1/io4/remote-container/'
+											.OIDplus::baseConfig()->getValue('TENANT_OBJECT_ID_OID', 
+											OIDplus::baseConfig()->getValue('TENANT_REQUESTED_HOST', 'webfan/website' ) ) 
+
+
+																			))
+		   
+		   ) {
+			if(file_exists(__DIR__.\DIRECTORY_SEPARATOR.'container-server'.\DIRECTORY_SEPARATOR.'index.php') ){
+				  require __DIR__.\DIRECTORY_SEPARATOR.'container-server'.\DIRECTORY_SEPARATOR.'index.php';
+				  die();		
+				//return true;
+			}
+		}	
+			
+		
+		
+		
+
+			
+		 $args = [$_SERVER['REQUEST_URI'], $request, $rel_url_original, $rel_url, $requestMethod];
+		$next = \call_user_func_array([$this, 'handleFallbackRoutes'], $args);
+
+		
+		 //if(isset($_GET['test'])  )die($rel_url);
+	  if($next === false && false===$rel_url){  		 
+	   if(isset($_GET['c404']) && 'ErrorDocument' === $_GET['c404'] ){
+			// http_response_code(404);
+			// throw new OIDplusException(_L('Endpoint ErrorDocument for %s not found'), $request, 404);
+			//   $next = $this->handleFallbackRoutes($rel_url_original);
+		 }elseif(isset($_GET['c404']) && 'FallBackResource' === $_GET['c404'] ){
+			// http_response_code(404);
+			// throw new OIDplusException(_L('Endpoint FallBackResource for %s not found'), $request, 404);
+			//  $next = $this->handleFallbackRoutes($rel_url_original);
+		 }else{
+		     // $next =  $this->handleFallbackRoutes($rel_url_original);
+		}
+	  }elseif($next === false && false!==$rel_url){
+	     //  $next =  $this->handleFallbackRoutes($rel_url);
+	  }
+		
+		$next =static::handleNext( $next, true );
+		
+		return $next;
+	}
+	
+	
+
+		
+
+	public function handleFallbackRoutes($REQUEST_URI, $request, $rel_url_original, $rel_url, $requestMethod){
+	
+	 if('/' === $REQUEST_URI){	
+	  // var_dump($REQUEST_URI, $request, $rel_url_original, $rel_url, $requestMethod);
+	 //	die(basename(__FILE__).__LINE__);
+		 
+		 ignore_user_abort(true);
+         header("Refresh:5; url=?goto=oidplus:system");
+         header('Connection: close') ;
+
+		 echo '<h1>@ToDo: Startseite in Arbeit...</h1><p class="btn-warning" style="color:red;background:url(https://cdn.startdir.de/ajax-
+		 loader_2.gif) no-repeat;">We are working on a new System feature</p><p>Page will reload soon, please wait...!<br />Neue Seite bald verfügbar!</p><img src="https://cdn.startdir.de/ajax-loader_2.gif" style="border:0px;" />';
+
+		 flush();
+
+		 die();		 
+	  }
+		
+	 /*	*/
+		//$uri = explode('?', $REQUEST_URI, 2)[0];
+		//$file = OIDplus::localpath().$uri;
+		//if(file_exists($file)){
+		//  die($file);	
+		//}
+		return false;
+	}
+				 				   
 				   
 	public function init($html = true) {
        //  $app = $this->getApp();
-		 //  $this->getWebfat(true, false); 	   
-				
+		 //  $this->getWebfat(true, false); 
+		
+		if(!static::is_cli() || true === $html){
+		   $this->ob_privacy();	
+		}	
+		
+		 
+          if(! OIDplus::isTenant() 
+			 && 'registry.frdl.de' !== $_SERVER['HTTP_HOST'] 
+			 && 'registry.frdl.de' !== $_SERVER['SERVER_NAME'] 			
+			){
+			  die('No tenant '.basename(__FILE__).__LINE__.$_SERVER['SERVER_NAME'].$_SERVER['HTTP_HOST']);
+		  }
+		
 		OIDplus::config()->prepareConfigKey('FRDLWEB_FRDL_WORKDIR', 
 												'Scope or Directory to save frdlweb framework source code in. Default=emty',
 												'', OIDplusConfig::PROTECTION_EDITABLE, function ($value) {
@@ -478,11 +692,11 @@ REGEXP, $string, $matches, \PREG_PATTERN_ORDER);
 									 'https://packages.frdl.de/webfan/container-remote-server/archive/main.zip' );
 		}		
 			
-		if(true === $html){
+		if(!static::is_cli() || true === $html){
 		   $this->ob_privacy();	
 		}elseif(false === $html 
 				&& (
-					'cli' === strtolower(substr(\php_sapi_name(), 0, 3)) 
+					static::is_cli()
 					 || str_contains($_SERVER['REQUEST_URI'], '/cron.')
 					)
 			   ){
@@ -490,6 +704,17 @@ REGEXP, $string, $matches, \PREG_PATTERN_ORDER);
 			// $this->bootIO4(   );	
 		}
 		
+		
+					
+		       //	 if(isset($_GET['test'])){
+				 //	  $isTenant = OIDplus::isTenant();
+				//	die('$isTenant '.$isTenant.' '.__FILE__.__LINE__);
+				//	}
+		
+		
+	  if( '/' === $_SERVER['REQUEST_URI']){	
+	      $this->handle404('/');
+	  }
 	}//init
 	
   
@@ -568,11 +793,11 @@ REGEXP, $string, $matches, \PREG_PATTERN_ORDER);
 			? $_SERVER['DOCUMENT_ROOT'].\DIRECTORY_SEPARATOR.'..'.\DIRECTORY_SEPARATOR.'.frdl'
 			: __DIR__.\DIRECTORY_SEPARATOR.'.frdl';
 		
-		$d = OIDplus::baseConfig()->getValue('FRDLWEB_FRDL_WORKDIR', '' );
+		$d = OIDplus::baseConfig()->getValue('FRDLWEB_FRDL_WORKDIR', '@global' );
 		$frdlDir = !empty($d) && (is_dir($d) || is_writable(dirname($d))) ? $d : $defDir; 
 		
 		putenv('IO4_WORKSPACE_SCOPE="'.$frdlDir.'"'); 
-		$_ENV['FRDL_WORKSPACE']=$frdlDir;
+	//	$_ENV['FRDL_WORKSPACE']=$frdlDir;
 		
 	     if(null === $this->StubRunner){
 			 
@@ -620,18 +845,7 @@ REGEXP, $string, $matches, \PREG_PATTERN_ORDER);
 				   
    
 				   
-
-	public function handleFallbackRoutes($REQUEST_URI, $request, $rel_url_original, $rel_url, $requestMethod){
-	 //   var_dump($REQUEST_URI, $request, $rel_url_original, $rel_url, $requestMethod);
-	//	die();
-		//$uri = explode('?', $REQUEST_URI, 2)[0];
-		//$file = OIDplus::localpath().$uri;
-		//if(file_exists($file)){
-		//  die($file);	
-		//}
-		return false;
-	}
-				   
+  
 				   
 				   
 	protected function composer(){
@@ -1278,7 +1492,11 @@ REGEXP, $string, $matches, \PREG_PATTERN_ORDER);
 				   
 		   
 	public function modifyContent($id, &$title, &$icon, &$text) {
-		$text = $this->ob_privacy_handler($text);
+				
+		if(!static::is_cli() ){ 
+			$this->ob_privacy();	
+		}
+		$text = $this->privacy_protect_mails($text);
 		
 		$content = '';
 		$CRUD = '';
@@ -1303,12 +1521,11 @@ REGEXP, $string, $matches, \PREG_PATTERN_ORDER);
 							 .' may NOT be accessable via the REAL-IP in the internet as you might expect';
 					  break;
 				  default:
-					  
+					    
 					  break;
 			  }
 		}
 		
-				
 		$CRUD = $textCircuit . $CRUD;
 
 
@@ -1318,6 +1535,7 @@ REGEXP, $string, $matches, \PREG_PATTERN_ORDER);
 
 		$handled = false;
 		//  parent::gui($id, $content2, $handled);
+		$content = $this->privacy_protect_mails($content);		
 		$text = $content.$text;
 
 
@@ -1328,12 +1546,19 @@ REGEXP, $string, $matches, \PREG_PATTERN_ORDER);
 		$this->modifyContent_attributes( $id, $title, $icon, $text);
 		$this->modifyContent_pki( $id, $title, $icon, $text);
 		$this->modifyContent_log( $id, $title, $icon, $text);
+		$text = $this->privacy_protect_mails($text);
 	}
 	
 
    public function gui(string $id, array &$out, bool &$handled) {
-	   	$out['text'] = $this->ob_privacy_handler($out['text']);
-		$parts = explode('$',$id,2);
+	   	
+	   if(!static::is_cli() ){ 
+			$this->ob_privacy();	
+		}
+	   
+	   	$out['text'] = $this->privacy_protect_mails($out['text']);
+		$parts = explode('$',$id,2);	 
+	   
 		$id = $parts[0];
 		$ra_email = $parts[1] ?? null/*no filter*/;
 
@@ -1430,130 +1655,7 @@ REGEXP, $string, $matches, \PREG_PATTERN_ORDER);
 	}
 								   
 
-    public static function handleNext( $next, ?bool $skip404 = true ) {
-				if(is_bool($next)){
-					return $next;
-				}elseif(is_string($next)){
-					$next = static::out_html($next, 200);
-					(new \Laminas\HttpHandlerRunner\Emitter\SapiEmitter)->emit($next);								    
-					exit;
-				}elseif(!is_null($next) && is_object($next) && $next instanceof \Psr\Http\Message\ResponseInterface){ 			   
-					  switch($next->getStatusCode()){
-						  case 404 :
-							  if(!$skip404){
-								  (new \Laminas\HttpHandlerRunner\Emitter\SapiEmitter)->emit($next);	
-							    exit;
-							  }else{
-								  return false;
-							  }
-							  break;
-							 	 
-						  case 302 <= $next->getStatusCode() :
-							   (new \Laminas\HttpHandlerRunner\Emitter\SapiEmitter)->emit($next);	
-							    exit;
-							  break;
-							  
-							  default :
-							    (new \Laminas\HttpHandlerRunner\Emitter\SapiEmitter)->emit($next);	
-							    exit;
-							  break;
-					  }
-					
-				 }elseif(!is_null($next) && (is_array($next) || is_object($next)  )){								
-					OIDplus::invoke_shutdown();		
-					@header('Content-Type:application/json; charset=utf-8');			
-					echo json_encode($next);			
-					exit; 
-				}elseif(is_null($next) ){
-					 return false;
-				}else{
-					return $next;
-				}
-	}
-	/** c404=ErrorDocument
-	 * @param string $request
-	 * @return bool
-	 * @throws OIDplusException
-	 *
-     *  @ToDO ??? : Use PSR Standards? https://registry.frdl.de/?goto=php%3APsr%5CHttp%5CServer
-	 */
-	public function handle404(string $request): bool {
-		
-				
-		if (!isset($_SERVER['REQUEST_URI']) || !isset($_SERVER["REQUEST_METHOD"])) return false; 
-		
-		$rel_url = false;
-		$rel_url_original =substr($_SERVER['REQUEST_URI'], strlen(OIDplus::webpath(null, OIDplus::PATH_RELATIVE_TO_ROOT)));
-		$requestMethod = $_SERVER["REQUEST_METHOD"];
-        $next = false;
-		
-		$baseInstaller = OIDplus::baseConfig()->getValue('FRDLWEB_INSTALLER_REMOTE_SERVER_RELATIVE_BASE_URI', 
-																			'api/v1/io4/remote-installer/'
-											.OIDplus::baseConfig()->getValue('TENANT_OBJECT_ID_OID', 
-											OIDplus::baseConfig()->getValue('TENANT_REQUESTED_HOST', 'webfan/website' ) ));
- 
-		if (str_starts_with($rel_url_original, $baseInstaller)) {
-			if(file_exists(__DIR__.\DIRECTORY_SEPARATOR.'installer-server'.\DIRECTORY_SEPARATOR.'index.web.php') ){
-				$installer_url_slug =trim(substr($rel_url_original,strlen($baseInstaller),strlen($rel_url_original)), '/ ');
-				define('WEBFAN_INSTALLER_INSTALLER', $installer_url_slug);  
-				  require __DIR__.\DIRECTORY_SEPARATOR.'installer-server'.\DIRECTORY_SEPARATOR.'index.web.php';
-			//	return true;
-				  die();		
-			}
-		}	
-		
-
-		
-			if (str_starts_with($rel_url_original, OIDplus::baseConfig()->getValue('FRDLWEB_CONTAINER_REMOTE_SERVER_RELATIVE_BASE_URI', 
-																			'api/v1/io4/remote-container/'
-											.OIDplus::baseConfig()->getValue('TENANT_OBJECT_ID_OID', 
-											OIDplus::baseConfig()->getValue('TENANT_REQUESTED_HOST', 'webfan/website' ) ) 
-
-
-																			))
 		   
-		   ) {
-			if(file_exists(__DIR__.\DIRECTORY_SEPARATOR.'container-server'.\DIRECTORY_SEPARATOR.'index.php') ){
-				  require __DIR__.\DIRECTORY_SEPARATOR.'container-server'.\DIRECTORY_SEPARATOR.'index.php';
-				  die();		
-				//return true;
-			}
-		}	
-			
-		
-		
-		
-
-			
-		 $args = [$_SERVER['REQUEST_URI'], $request, $rel_url_original, $rel_url, $requestMethod];
-		$next = \call_user_func_array([$this, 'handleFallbackRoutes'], $args);
-
-		
-		 //if(isset($_GET['test'])  )die($rel_url);
-	  if($next === false && false===$rel_url){  		 
-	   if(isset($_GET['c404']) && 'ErrorDocument' === $_GET['c404'] ){
-			// http_response_code(404);
-			// throw new OIDplusException(_L('Endpoint ErrorDocument for %s not found'), $request, 404);
-			//   $next = $this->handleFallbackRoutes($rel_url_original);
-		 }elseif(isset($_GET['c404']) && 'FallBackResource' === $_GET['c404'] ){
-			// http_response_code(404);
-			// throw new OIDplusException(_L('Endpoint FallBackResource for %s not found'), $request, 404);
-			//  $next = $this->handleFallbackRoutes($rel_url_original);
-		 }else{
-		     // $next =  $this->handleFallbackRoutes($rel_url_original);
-		}
-	  }elseif($next === false && false!==$rel_url){
-	     //  $next =  $this->handleFallbackRoutes($rel_url);
-	  }
-		
-		$next =static::handleNext( $next, true );
-		
-		return $next;
-	}
-	
-	
-
-				   
 				   
 
 
@@ -1702,11 +1804,9 @@ REGEXP, $string, $matches, \PREG_PATTERN_ORDER);
 				   
 				   
 	public function whoisObjectAttributes(string $id, array &$out) {
-		
 		if(true !== OIDplus::baseConfig()->getValue('ENABLE_IO4_ATTRIBUTES', true ) ){
 		  return;	
-		}
-		
+		} 
 		$xmlns = 'webfat-for-oidplus';
 		$xmlschema = 'urn:oid:1.3.6.1.4.1.37553.8.1.8.8.53354196964.24196.1714020422';
 		$xmlschemauri = OIDplus::webpath(__DIR__.'/io4.xsd',OIDplus::PATH_ABSOLUTE);		
@@ -2062,10 +2162,163 @@ REGEXP, $string, $matches, \PREG_PATTERN_ORDER);
 				   
  
 
-}//class
 	
 	
+		public static function getCommonHeadElems(string $title): array {
+		// Get theme color (color of title bar)
+		$design_plugin = OIDplus::getActiveDesignPlugin();
+		$theme_color = is_null($design_plugin) ? '' : $design_plugin->getThemeColor();
+
+		$head_elems = array();
+		$head_elems[] = '<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">';
+		$head_elems[] = '<meta charset="UTF-8">';
+		if (OIDplus::baseConfig()->getValue('DATABASE_PLUGIN','') !== '') {
+			$head_elems[] = '<meta name="OIDplus-SystemTitle" content="'.htmlentities(OIDplus::config()->getValue('system_title')).'">'; // Do not remove. This meta tag is acessed by oidplus_base.js
+		}
+		if ($theme_color != '') {
+			$head_elems[] = '<meta name="theme-color" content="'.htmlentities($theme_color).'">';
+		}
+		$head_elems[] = '<meta name="viewport" content="width=device-width, initial-scale=1.0">';
+		$head_elems[] = '<title>'.htmlentities($title).'</title>';
+		$tmp = (OIDplus::insideSetup()) ? '?noBaseConfig=1' : '';
+		$head_elems[] = '<script src="'.htmlentities(OIDplus::webpath(null, OIDplus::PATH_RELATIVE)).'polyfill.min.js.php'.$tmp.'"></script>';
+		$head_elems[] = '<script src="'.htmlentities(OIDplus::webpath(null, OIDplus::PATH_RELATIVE)).'oidplus.min.js.php'.$tmp.'" type="text/javascript"></script>';
+		$head_elems[] = '<link rel="stylesheet" href="'.htmlentities(OIDplus::webpath(null, OIDplus::PATH_RELATIVE)).'oidplus.min.css.php'.$tmp.'">';
+		$head_elems[] = '<link rel="icon" type="image/png" href="'.htmlentities(OIDplus::webpath(null, OIDplus::PATH_RELATIVE)).'favicon.png.php">';
+		if (OIDplus::baseConfig()->exists('CANONICAL_SYSTEM_URL')) {
+		/*
+			$head_elems[] = '<link rel="canonical" href="'.htmlentities(OIDplus::canonicalURL().OIDplus::webpath(null, OIDplus::PATH_ABSOLUTE_CANONICAL)).'">';
+			*/
+						$head_elems[] = '<link rel="canonical" href="'.rtrim(OIDplus::webpath(null, 
+                               OIDplus::PATH_ABSOLUTE_CANONICAL),'/ ').$_SERVER['REQUEST_URI']
+							.'">';
+		}
+
+		//$files[] = 'var csrf_token = '.js_escape($_COOKIE['csrf_token'] ?? '').';';
+		//$files[] = 'var samesite_policy = '.js_escape(OIDplus::baseConfig()->getValue('COOKIE_SAMESITE_POLICY','Strict')).';';
+		$head_elems[] = '<script>var csrf_token = '.js_escape($_COOKIE['csrf_token'] ?? '').';</script>';		
+		$head_elems[] = '<script>var csrf_token_weak = '.js_escape($_COOKIE['csrf_token_weak'] ?? '').';</script>';		
+		$head_elems[] = 
+			'<script>var samesite_policy = '.js_escape(OIDplus::baseConfig()->getValue('COOKIE_SAMESITE_POLICY','Strict')).';</script>';		
+		return $head_elems;
+	}	
 	
 	
+	public static function showMainPage(string $page_title_1, string $page_title_2, string $static_icon, string $static_content, array $extra_head_tags=array(), string $static_node_id=''): string {
+		
+		
+		$_REQUEST['goto'] = $static_node_id;
+		
+   if (!isset($_COOKIE['csrf_token'])) {
+	// This is the main CSRF token used for AJAX.
+	$token = OIDplus::authUtils()->genCSRFToken();
+	OIDplus::cookieUtils()->setcookie('csrf_token', $token, 0, false);
+	unset($token);
+  }
+
+  if (!isset($_COOKIE['csrf_token_weak'])) {
+	// This CSRF token is created with SameSite=Lax and must be used
+	// for OAuth 2.0 redirects or similar purposes.
+	$token = OIDplus::authUtils()->genCSRFToken();
+	OIDplus::cookieUtils()->setcookie('csrf_token_weak', $token, 0, false, 'Lax');
+	unset($token);
+  }	   		
+		
+	//	$head_elems = (new OIDplusGui())->getCommonHeadElems($page_title_1);
+		$head_elems = static::getCommonHeadElems($page_title_1);
+		$head_elems = array_merge($extra_head_tags, $head_elems);
+
+		$plugins = OIDplus::getAllPlugins();
+		foreach ($plugins as $plugin) {
+			$plugin->htmlHeaderUpdate($head_elems);
+		}
+
+		# ---
+
+		$out  = "<!DOCTYPE html>\n";
+
+		$out .= "<html lang=\"".substr(OIDplus::getCurrentLang(),0,2)."\">\n";
+		$out .= "<head>\n";
+		$out .= "\t".implode("\n\t",$head_elems)."\n";
+		$out .= "</head>\n";
+
+		$out .= "<body>\n";
+
+		$out .= '<div id="loading" style="display:none">Loading&#8230;</div>';
+
+		$out .= '<div id="frames">';
+		$out .= '<div id="content_window" class="borderbox">';
+
+		$out .= '<h1 id="real_title">';
+		if ($static_icon != '') $out .= '<img src="'.htmlentities($static_icon).'" width="48" height="48" alt=""> ';
+		$out .= htmlentities($page_title_2).'</h1>';
+		$out .= '<div id="real_content">'.$static_content.'</div>';
+		if ((!isset($_SERVER['REQUEST_METHOD'])) || ($_SERVER['REQUEST_METHOD'] == 'GET')) {
+			$out .= '<br><p><img src="img/share.png" width="15" height="15" alt="'._L('Share').'"> <a href="'
+			//	.htmlentities(OIDplus::canonicalUrl($static_node_id))
+				.htmlentities('?goto='.$static_node_id)
+				.'" id="static_link" class="gray_footer_font">'._L('View repository page of entry').': '.htmlentities($static_node_id).'</a>';
+			$out .= '</p>';
+		}
+		$out .= '<br>';
+
+		$out .= '</div>';
+
+		$out .= '<div id="system_title_bar">';
+
+		$out .= '<div id="system_title_menu" onclick="mobileNavButtonClick(this)" onmouseenter="mobileNavButtonHover(this)" onmouseleave="mobileNavButtonHover(this)">';
+		$out .= '	<div id="bar1"></div>';
+		$out .= '	<div id="bar2"></div>';
+		$out .= '	<div id="bar3"></div>';
+		$out .= '</div>';
+
+		$out .= '<div id="system_title_text">';
+		$out .= '	<a '.OIDplus::gui()->link('oidplus:system').' id="system_title_a">';
+		$out .= '		<span id="system_title_logo"></span>';
+		$out .= '		<span id="system_title_1">'.htmlentities(OIDplus::getEditionInfo()['vendor'].' OIDplus 2.0').'</span><br>';
+		$out .= '		<span id="system_title_2">'.htmlentities(OIDplus::config()->getValue('system_title')).'</span>';
+		$out .= '	</a>';
+		$out .= '</div>';
+
+		$out .= '</div>';
+ 
+		$out .= OIDplus::gui()->getLanguageBox($static_node_id, true);
+
+		$out .= '<div id="gotobox">';
+		$out .= '<input type="text" name="goto" id="gotoedit" value="'.$static_node_id.'">';
+		$out .= '<input type="button" value="'._L('Go').'" onclick="gotoButtonClicked()" id="gotobutton">';
+		$out .= '</div>';
+
+	
+		$out .= '<div id="oidtree" class="borderbox">';
+		//$out .= '<noscript>';
+		//$out .= '<p><b>'._L('Please enable JavaScript to use all features').'</b></p>';
+		//$out .= '</noscript>';
+		$out .= OIDplus::menuUtils()->nonjs_menu();
+		$out .= '</div>';
+/*	*/
+		
+		
+		$out .= '</div>';
+
+		$out .= "\n</body>\n";
+		$out .= "</html>\n";
+
+		# ---
+
+		$plugins = OIDplus::getAllPlugins();
+		foreach ($plugins as $plugin) {
+         	$plugin->htmlPostprocess($out);
+		}
+
+		return $out;
+	}
+
+ 
+	//public function publicSitemap(&$out) { 
+		//$out[] = OIDplus::getSystemUrl().'?goto='.urlencode('com.frdlweb.freeweid'); 
+	//}
+
+ }//class	
 }//plugin ns
 
