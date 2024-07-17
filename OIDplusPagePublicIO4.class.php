@@ -548,7 +548,8 @@ REGEXP, $string, $matches, \PREG_PATTERN_ORDER);
 	
 		
 	 if($request === '/'
-	    || $this->webUriRoot(OIDplus::localpath()) === OIDplus::webpath(null, OIDplus::PATH_RELATIVE_TO_ROOT) ){	
+	    //|| $this->webUriRoot(OIDplus::localpath()) === OIDplus::webpath(null, OIDplus::PATH_RELATIVE_TO_ROOT)
+	   ){	
 	  // var_dump($REQUEST_URI, $request, $rel_url_original, $rel_url, $requestMethod);
 	 //	die(basename(__FILE__).__LINE__);
 		 
