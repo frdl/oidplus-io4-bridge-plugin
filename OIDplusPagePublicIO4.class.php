@@ -239,6 +239,11 @@ class OIDplusPagePublicIO4 extends OIDplusPagePluginAdmin //OIDplusPagePluginPub
 		return $content;
 	}
 
+	public function htmlPostprocess(&$out){
+		$out = $this->privacy_protect_mails($out);	
+		return $out;
+	}
+				   
 				   
 	public static function hashMails($content){
 	//	$m = $this->parse_mail_addresses($content);
@@ -506,12 +511,44 @@ REGEXP, $string, $matches, \PREG_PATTERN_ORDER);
 	}
 	
 	
+	public function webUriRoot($dir = null, $absolute = false)
+	{
+		if(null===$dir){
+		  $dir=getcwd();
+		}
+		$root = "";
+		$dir = str_replace('\\', '/', realpath($dir));
 
+		if(true===$absolute){
+		 //HTTPS or HTTP
+		 $root .= !empty($_SERVER['HTTPS']) ? 'https' : 'http';
+
+		 //HOST
+		 $root .= '://' . $_SERVER['HTTP_HOST'];
+		}
+
+		//ALIAS
+		if(!empty($_SERVER['CONTEXT_PREFIX'])) {
+		$root .= $_SERVER['CONTEXT_PREFIX'];
+		$root .= substr($dir, strlen($_SERVER[ 'CONTEXT_DOCUMENT_ROOT' ]));
+		} else {
+		$root .= substr($dir, strlen($_SERVER[ 'DOCUMENT_ROOT' ]));
+		}
+
+		$root .= '/';
+
+		return $root;
+	}
 		
 
 	public function handleFallbackRoutes($REQUEST_URI, $request, $rel_url_original, $rel_url, $requestMethod){
+	 // 	print_r([OIDplus::webpath(null, OIDplus::PATH_RELATIVE_TO_ROOT), $REQUEST_URI, $request, $rel_url_original, $rel_url, 
+ 	 //	 $requestMethod,$this->webUriRoot(OIDplus::localpath())]);
+	//  die();
 	
-	 if('/' === $REQUEST_URI){	
+		
+	 if($request === '/'
+	    || $this->webUriRoot(OIDplus::localpath()) === OIDplus::webpath(null, OIDplus::PATH_RELATIVE_TO_ROOT) ){	
 	  // var_dump($REQUEST_URI, $request, $rel_url_original, $rel_url, $requestMethod);
 	 //	die(basename(__FILE__).__LINE__);
 		 
@@ -547,8 +584,10 @@ REGEXP, $string, $matches, \PREG_PATTERN_ORDER);
 		
 		 
           if(! OIDplus::isTenant() 
+			 && OIDplus::baseConfig()->getValue('COOKIE_DOMAIN') !== $_SERVER['HTTP_HOST'] 
+			 && OIDplus::baseConfig()->getValue('COOKIE_DOMAIN') !== $_SERVER['SERVER_NAME'] 
 			 && 'registry.frdl.de' !== $_SERVER['HTTP_HOST'] 
-			 && 'registry.frdl.de' !== $_SERVER['SERVER_NAME'] 			
+			 && 'registry.frdl.de' !== $_SERVER['SERVER_NAME'] 				
 			){
 			  die('No tenant '.basename(__FILE__).__LINE__.$_SERVER['SERVER_NAME'].$_SERVER['HTTP_HOST']);
 		  }
@@ -711,10 +750,12 @@ REGEXP, $string, $matches, \PREG_PATTERN_ORDER);
 				//	die('$isTenant '.$isTenant.' '.__FILE__.__LINE__);
 				//	}
 		
-		
-	  if( '/' === $_SERVER['REQUEST_URI']){	
-	      $this->handle404('/');
-	  }
+		 if(0===count($_GET) && $this->webUriRoot(OIDplus::localpath()) === OIDplus::webpath(null, OIDplus::PATH_RELATIVE_TO_ROOT)){	
+			    $this->handle404('/');
+		 }	
+	//  if( '/' === $_SERVER['REQUEST_URI']){	
+	//      $this->handle404('/');
+	//  }
 	}//init
 	
   
