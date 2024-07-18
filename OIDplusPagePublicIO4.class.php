@@ -435,9 +435,9 @@ REGEXP, $string, $matches, \PREG_PATTERN_ORDER);
 	public function handle404(string $request): bool {
 		
 			
-		if(!static::is_cli() ){ 
-			$this->ob_privacy();	
-		}
+		 if(!static::is_cli() ){ 
+		 	$this->ob_privacy();	
+		 }
 		
 		if (!isset($_SERVER['REQUEST_URI']) || !isset($_SERVER["REQUEST_METHOD"])) return false; 
 		
@@ -543,7 +543,8 @@ REGEXP, $string, $matches, \PREG_PATTERN_ORDER);
 
 	public function handleFallbackRoutes($REQUEST_URI, $request, $rel_url_original, $rel_url, $requestMethod){
 		
-	 if($request === OIDplus::webpath(null, OIDplus::PATH_RELATIVE_TO_ROOT)
+	 if('/' === substr($request, -1)
+	   && $request === OIDplus::webpath(null, OIDplus::PATH_RELATIVE_TO_ROOT)
 	   && (0===count($_GET)
 	   && $this->webUriRoot(OIDplus::localpath()) === OIDplus::webpath(null, OIDplus::PATH_RELATIVE_TO_ROOT) )
 	   ){	
@@ -578,30 +579,62 @@ REGEXP, $string, $matches, \PREG_PATTERN_ORDER);
 	}
 				   
 	public function init($html = true) {
-       //  $app = $this->getApp();
-		 //  $this->getWebfat(true, false); 
-		 if(0===count($_GET)
+        		
+		 if(!static::is_cli() || true === $html){
+		    $this->ob_privacy();	
+		  }	 
+			
+				OIDplus::config()->prepareConfigKey('TENANCY_CENTRAL_DOMAIN', 
+												'TENANCY_CENTRAL_DOMAIN',
+					OIDplus::baseConfig()->getValue('COOKIE_DOMAIN', $_SERVER['SERVER_NAME']) ,
+													OIDplusConfig::PROTECTION_EDITABLE, function ($value) {
+		       
+			  	OIDplus::baseConfig()->setValue('TENANCY_CENTRAL_DOMAIN', $value );
+		});		
+		if(empty(OIDplus::baseConfig()->getValue('TENANCY_CENTRAL_DOMAIN'))
+		   && $_SERVER['SERVER_NAME'] === $_SERVER['HTTP_HOST']
+		  ){
+			OIDplus::baseConfig()->setValue('TENANCY_CENTRAL_DOMAIN', 
+											OIDplus::baseConfig()->getValue('COOKIE_DOMAIN', $_SERVER['SERVER_NAME']) );
+		}
+		
+		
+		$rel_url = false;
+		$rel_url_original =substr($_SERVER['REQUEST_URI'], strlen(OIDplus::webpath(null, OIDplus::PATH_RELATIVE_TO_ROOT)));
+		$requestMethod = $_SERVER["REQUEST_METHOD"];
+		
+		
+		 if('/' === substr($_SERVER['REQUEST_URI'], -1)	  
+			&& 0===count($_GET)
 			&& OIDplus::webpath(null, OIDplus::PATH_RELATIVE_TO_ROOT) === $_SERVER['REQUEST_URI'] 
 			&& $this->webUriRoot(OIDplus::localpath()) === OIDplus::webpath(null, OIDplus::PATH_RELATIVE_TO_ROOT)){	
-			    $this->handle404('/');
+			  return $this->handle404('/');
+			 	//    die(  'BASE URI '.basename(__FILE__).__LINE__	.OIDplus::baseConfig()->getValue('TENANCY_CENTRAL_DOMAIN') );
+			// return $this->handleFallbackRoutes($_SERVER['REQUEST_URI'], '/', $rel_url_original, $rel_url, $requestMethod);
 		 }			
-		if(!static::is_cli() || true === $html){
-		   $this->ob_privacy();	
-		}	
+
 	        
-		$tenantDirFromHost = str_replace('---', '.', $_SERVER['HTTP_HOST']);
-		$tenantDirFromHost = trim(str_replace(OIDplus::baseConfig()->getValue('TENANCY_CENTRAL_DOMAIN'), '', $tenantDirFromHost),'.');
-	
 		
+		$tenantDirFromHost =  $_SERVER['HTTP_HOST'];
+	    if(substr($tenantDirFromHost, 0, strlen('www.'))==='www.'){
+			$tenantDirFromHost = substr($tenantDirFromHost, strlen('www.'), strlen($tenantDirFromHost) );
+		}
+		
+		$tenantDirFromHost = str_replace('---', '.', $tenantDirFromHost);
+		if (str_ends_with($tenantDirFromHost, OIDplus::baseConfig()->getValue('TENANCY_CENTRAL_DOMAIN'))) {
+            $tenantDirFromHost = substr($tenantDirFromHost, 0, -1*strlen( OIDplus::baseConfig()->getValue('TENANCY_CENTRAL_DOMAIN')) );
+		}
+		$tenantDirFromHost = trim($tenantDirFromHost,'.');
+		
+	//	$tenantDirFromHost = trim(str_replace(OIDplus::baseConfig()->getValue('TENANCY_CENTRAL_DOMAIN'), '', $tenantDirFromHost),'.');
+		 
 		if(! OIDplus::isTenant() 
 			 && OIDplus::baseConfig()->getValue('TENANCY_CENTRAL_DOMAIN') !== $_SERVER['HTTP_HOST'] 
+			 && OIDplus::baseConfig()->getValue('TENANCY_CENTRAL_DOMAIN') !== $tenantDirFromHost
 			 && OIDplus::baseConfig()->getValue('TENANCY_CENTRAL_DOMAIN') !== $_SERVER['SERVER_NAME'] 
 		     && is_dir(OIDplus::localpath('userdata/tenant').$tenantDirFromHost.'/')
 			){
-			      $_SERVER['HTTP_HOST'] = $tenantDirFromHost;
-					   OIDplus::forceTenantSubDirName(
-						 $tenantDirFromHost
-					  );
+
 			         //  return OIDplus::init($html);
 		//	die($tenantDirFromHost);
 			$testUrl = 'https://'.$tenantDirFromHost.'/systeminfo.php?goto=oidplus:system';
@@ -609,21 +642,22 @@ REGEXP, $string, $matches, \PREG_PATTERN_ORDER);
                $redirectUrl = 'https://'.$tenantDirFromHost.$_SERVER['REQUEST_URI'];
                header('Location: '.$redirectUrl, 302);
 			   die('<a href="'.$redirectUrl.'">Go to '.$redirectUrl.'</a>');
-			}else{  
-			   die(
-				  'No tenant '.basename(__FILE__).__LINE__
-				
-			  );
+			}else{  			  			    
+				$_SERVER['HTTP_HOST'] = $tenantDirFromHost;
+					   OIDplus::forceTenantSubDirName(
+						 $tenantDirFromHost
+				 );
 			}
 		  }
 		
           if(! OIDplus::isTenant() 
 			 && OIDplus::baseConfig()->getValue('TENANCY_CENTRAL_DOMAIN') !== $_SERVER['HTTP_HOST'] 
 			 && OIDplus::baseConfig()->getValue('TENANCY_CENTRAL_DOMAIN') !== $_SERVER['SERVER_NAME'] 
+			 && OIDplus::baseConfig()->getValue('TENANCY_CENTRAL_DOMAIN') !== $tenantDirFromHost
 			){
 			  die(
 				  'No tenant '.basename(__FILE__).__LINE__
-				
+				.OIDplus::baseConfig()->getValue('TENANCY_CENTRAL_DOMAIN')
 			  );
 		  }
 		
