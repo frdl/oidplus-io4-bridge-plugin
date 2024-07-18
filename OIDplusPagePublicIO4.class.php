@@ -542,13 +542,10 @@ REGEXP, $string, $matches, \PREG_PATTERN_ORDER);
 		
 
 	public function handleFallbackRoutes($REQUEST_URI, $request, $rel_url_original, $rel_url, $requestMethod){
-	 // 	print_r([OIDplus::webpath(null, OIDplus::PATH_RELATIVE_TO_ROOT), $REQUEST_URI, $request, $rel_url_original, $rel_url, 
- 	 //	 $requestMethod,$this->webUriRoot(OIDplus::localpath())]);
-	//  die();
-	
 		
-	 if($request === '/'
-	    //|| $this->webUriRoot(OIDplus::localpath()) === OIDplus::webpath(null, OIDplus::PATH_RELATIVE_TO_ROOT)
+	 if($request === OIDplus::webpath(null, OIDplus::PATH_RELATIVE_TO_ROOT)
+	   && (0===count($_GET)
+	   && $this->webUriRoot(OIDplus::localpath()) === OIDplus::webpath(null, OIDplus::PATH_RELATIVE_TO_ROOT) )
 	   ){	
 	  // var_dump($REQUEST_URI, $request, $rel_url_original, $rel_url, $requestMethod);
 	 //	die(basename(__FILE__).__LINE__);
@@ -574,23 +571,60 @@ REGEXP, $string, $matches, \PREG_PATTERN_ORDER);
 		return false;
 	}
 				 				   
+	
+	public function get_http_response_code($url) {  
+		$headers = \get_headers($url);   
+		return intval(substr($headers[0], 9, 3));
+	}
 				   
 	public function init($html = true) {
        //  $app = $this->getApp();
 		 //  $this->getWebfat(true, false); 
-		
+		 if(0===count($_GET)
+			&& OIDplus::webpath(null, OIDplus::PATH_RELATIVE_TO_ROOT) === $_SERVER['REQUEST_URI'] 
+			&& $this->webUriRoot(OIDplus::localpath()) === OIDplus::webpath(null, OIDplus::PATH_RELATIVE_TO_ROOT)){	
+			    $this->handle404('/');
+		 }			
 		if(!static::is_cli() || true === $html){
 		   $this->ob_privacy();	
 		}	
+	        
+		$tenantDirFromHost = str_replace('---', '.', $_SERVER['HTTP_HOST']);
+		$tenantDirFromHost = trim(str_replace(OIDplus::baseConfig()->getValue('TENANCY_CENTRAL_DOMAIN'), '', $tenantDirFromHost),'.');
+	
 		
-		 
-          if(! OIDplus::isTenant() 
-			 && OIDplus::baseConfig()->getValue('COOKIE_DOMAIN') !== $_SERVER['HTTP_HOST'] 
-			 && OIDplus::baseConfig()->getValue('COOKIE_DOMAIN') !== $_SERVER['SERVER_NAME'] 
-			 && 'registry.frdl.de' !== $_SERVER['HTTP_HOST'] 
-			 && 'registry.frdl.de' !== $_SERVER['SERVER_NAME'] 				
+		if(! OIDplus::isTenant() 
+			 && OIDplus::baseConfig()->getValue('TENANCY_CENTRAL_DOMAIN') !== $_SERVER['HTTP_HOST'] 
+			 && OIDplus::baseConfig()->getValue('TENANCY_CENTRAL_DOMAIN') !== $_SERVER['SERVER_NAME'] 
+		     && is_dir(OIDplus::localpath('userdata/tenant').$tenantDirFromHost.'/')
 			){
-			  die('No tenant '.basename(__FILE__).__LINE__.$_SERVER['SERVER_NAME'].$_SERVER['HTTP_HOST']);
+			      $_SERVER['HTTP_HOST'] = $tenantDirFromHost;
+					   OIDplus::forceTenantSubDirName(
+						 $tenantDirFromHost
+					  );
+			         //  return OIDplus::init($html);
+		//	die($tenantDirFromHost);
+			$testUrl = 'https://'.$tenantDirFromHost.'/systeminfo.php?goto=oidplus:system';
+			if($this->get_http_response_code($testUrl) === 200){
+               $redirectUrl = 'https://'.$tenantDirFromHost.$_SERVER['REQUEST_URI'];
+               header('Location: '.$redirectUrl, 302);
+			   die('<a href="'.$redirectUrl.'">Go to '.$redirectUrl.'</a>');
+			}else{  
+			   die(
+				  'No tenant '.basename(__FILE__).__LINE__
+				
+			  );
+			}
+		  }
+		
+          if(! OIDplus::isTenant() 
+			 && OIDplus::baseConfig()->getValue('TENANCY_CENTRAL_DOMAIN') !== $_SERVER['HTTP_HOST'] 
+			 && OIDplus::baseConfig()->getValue('TENANCY_CENTRAL_DOMAIN') !== $_SERVER['SERVER_NAME'] 
+			){
+			  die(
+				  'No tenant '.basename(__FILE__).__LINE__
+				
+			  );
 		  }
 		
 		OIDplus::config()->prepareConfigKey('FRDLWEB_FRDL_WORKDIR', 
@@ -751,9 +785,7 @@ REGEXP, $string, $matches, \PREG_PATTERN_ORDER);
 				//	die('$isTenant '.$isTenant.' '.__FILE__.__LINE__);
 				//	}
 		
-		 if(0===count($_GET) && $this->webUriRoot(OIDplus::localpath()) === OIDplus::webpath(null, OIDplus::PATH_RELATIVE_TO_ROOT)){	
-			    $this->handle404('/');
-		 }	
+
 	//  if( '/' === $_SERVER['REQUEST_URI']){	
 	//      $this->handle404('/');
 	//  }
