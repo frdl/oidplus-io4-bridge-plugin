@@ -387,15 +387,17 @@ REGEXP, $string, $matches, \PREG_PATTERN_ORDER);
 				if(is_bool($next)){
 					return $next;
 				}elseif(is_string($next)){
+					//return $next;
 					$next = static::out_html($next, 200);
 					(new \Laminas\HttpHandlerRunner\Emitter\SapiEmitter)->emit($next);								    
-					exit;
+					die();
+					//return static::out_html($next);
 				}elseif(!is_null($next) && is_object($next) && $next instanceof \Psr\Http\Message\ResponseInterface){ 			   
 					  switch($next->getStatusCode()){
 						  case 404 :
 							  if(!$skip404){
 								  (new \Laminas\HttpHandlerRunner\Emitter\SapiEmitter)->emit($next);	
-							    exit;
+							    die();
 							  }else{
 								  return false;
 							  }
@@ -403,12 +405,12 @@ REGEXP, $string, $matches, \PREG_PATTERN_ORDER);
 							 	 
 						  case 302 <= $next->getStatusCode() :
 							   (new \Laminas\HttpHandlerRunner\Emitter\SapiEmitter)->emit($next);	
-							    exit;
+							    die();
 							  break;
 							  
 							  default :
 							    (new \Laminas\HttpHandlerRunner\Emitter\SapiEmitter)->emit($next);	
-							    exit;
+							   die();
 							  break;
 					  }
 					
@@ -509,7 +511,15 @@ REGEXP, $string, $matches, \PREG_PATTERN_ORDER);
 		
 		return $next;
 	}
-	
+	 
+	public static function out_html(string $html, ?int $code = 200, $callback = null, ?array $templateVars = []){			
+		$contents = '';							
+		$contents.=\is_callable($callback) ? $callback($html, $templateVars) : $html;					
+		$response = new Response($code);			
+		$response =  $response->withBody(\GuzzleHttp\Psr7\Utils::streamFor($contents));	
+		return $response;
+	}
+								   
 	
 	public function webUriRoot($dir = null, $absolute = false)
 	{
@@ -542,6 +552,7 @@ REGEXP, $string, $matches, \PREG_PATTERN_ORDER);
 		
 
 	public function handleFallbackRoutes($REQUEST_URI, $request, $rel_url_original, $rel_url, $requestMethod){
+		$html = '';
 		
 	 if('/' === substr($request, -1)
 	   && $request === OIDplus::webpath(null, OIDplus::PATH_RELATIVE_TO_ROOT)
@@ -550,17 +561,17 @@ REGEXP, $string, $matches, \PREG_PATTERN_ORDER);
 	   ){	
 	  // var_dump($REQUEST_URI, $request, $rel_url_original, $rel_url, $requestMethod);
 	 //	die(basename(__FILE__).__LINE__);
-		 
+		// ob_end_clean();
 		 ignore_user_abort(true);
          header("Refresh:5; url=?goto=oidplus:system");
          header('Connection: close') ;
 
-		 echo '<h1>@ToDo: Startseite in Arbeit...</h1><p class="btn-warning" style="color:red;background:url(https://cdn.startdir.de/ajax-
+		 $html.= '<h1>@ToDo: Startseite in Arbeit...</h1><p class="btn-warning" style="color:red;background:url(https://cdn.startdir.de/ajax-
 		 loader_2.gif) no-repeat;">We are working on a new System feature</p><p>Page will reload soon, please wait...!<br />Neue Seite bald verfügbar!</p><img src="https://cdn.startdir.de/ajax-loader_2.gif" style="border:0px;" />';
 
-		 flush();
-
-		 die();		 
+		// flush();
+		// die($html);		
+		return $html;
 	  }
 		
 	 /*	*/
@@ -1676,6 +1687,7 @@ REGEXP, $string, $matches, \PREG_PATTERN_ORDER);
           $out = \call_user_func_array([$this, self::PAGES[$id]], [$id, $out]);   
 	   }
  
+	   	$out['text'] = $this->privacy_protect_mails($out['text']);
 	}	
 				   
 				   
@@ -1713,55 +1725,10 @@ REGEXP, $string, $matches, \PREG_PATTERN_ORDER);
    }
 				   
 
-	/**
-	 * @param array $json
-	 * @param string|null $ra_email
-	 * @param bool $nonjs
-	 * @param string $req_goto
-	 * @return bool
-	 * @throws OIDplusException
-	 */
-	public function tree(array &$json, string $ra_email=null, bool $nonjs=false, string $req_goto=''): bool {
-		if (!OIDplus::authUtils()->isAdminLoggedIn()) return false;
 
-		if (file_exists(__DIR__.'/img/main_icon16.png')) {
-			$tree_icon = OIDplus::webpath(__DIR__,OIDplus::PATH_RELATIVE).'img/main_icon16.png';
-		} else {
-			$tree_icon = null; // default icon (folder)
-		}
-
-		$json[] = array(
-			'id' => self::PAGE_ID_COMPOSER,
-			//'icon' => $tree_icon,
-			'text' => _L('Composer Plugins'), 
-		);
-		
-		
-		$json[] = array(
-			'id' => self::PAGE_ID_WEBFAT,
-			//'icon' => $tree_icon,
-			'text' => _L('Webfan Webfat Setup'),
-			//'href'=>$this->getWebfatSetupLink(),
-		);
-
-		$json[] = array(
-			'id' => self::PAGE_ID_BRIDGE,
-			//'icon' => $tree_icon,
-			'text' => _L('Webfan IO4 Bridge'), 
-		);
-
-		return true;
-	}
 
 				   
-    public static function out_html(string $html, ?int $code = 200, $callback = null, ?array $templateVars = []){			
-		$contents = '';							
-		$contents.=\is_callable($callback) ? $callback($html, $templateVars) : $html;					
-		$response = new Response($code);			
-		$response =  $response->withBody(\GuzzleHttp\Psr7\Utils::streamFor($contents));	
-		return $response;
-	}
-								   
+
 
 		   
 				   
@@ -2422,10 +2389,72 @@ REGEXP, $string, $matches, \PREG_PATTERN_ORDER);
 		return $out;
 	}
 
- 
-	//public function publicSitemap(&$out) { 
+				   
+				   
+ 	/**
+	 * @param array $json
+	 * @param string|null $ra_email
+	 * @param bool $nonjs
+	 * @param string $req_goto
+	 * @return bool
+	 * @throws OIDplusException
+	 */
+	public function tree(array &$json, string $ra_email=null, bool $nonjs=false, string $req_goto=''): bool {
+	
+		
+		if (file_exists(__DIR__.'/img/main_icon16.png')) {
+			$tree_icon = OIDplus::webpath(__DIR__,OIDplus::PATH_RELATIVE).'img/main_icon16.png';
+		} else {
+			$tree_icon = null; // default icon (folder)
+		}
+		/*
+		 $json[] = array(
+		 	'id' => 'oidplus:home',
+			'icon' => $tree_icon,
+			 'a_attr'=>[
+				 'href'=>OIDplus::webpath(__DIR__,OIDplus::PATH_RELATIVE),				 
+			 ],
+			'text' => _L('Home'), 
+		);		
+		
+
+	  	$json[] = array(
+			'id' => 'oidplus:system',
+			//'icon' => $tree_icon,
+			'text' => _L('Registry'), 
+		);	
+		
+		*/
+		if (!OIDplus::authUtils()->isAdminLoggedIn()) return false;
+
+
+
+		$json[] = array(
+			'id' => self::PAGE_ID_COMPOSER,
+			//'icon' => $tree_icon,
+			'text' => _L('Composer Plugins'), 
+		);
+		
+		
+		$json[] = array(
+			'id' => self::PAGE_ID_WEBFAT,
+			//'icon' => $tree_icon,
+			'text' => _L('Webfan Webfat Setup'),
+			//'href'=>$this->getWebfatSetupLink(),
+		);
+
+		$json[] = array(
+			'id' => self::PAGE_ID_BRIDGE,
+			//'icon' => $tree_icon,
+			'text' => _L('Webfan IO4 Bridge'), 
+		);
+
+		return true;
+	}
+	 public function publicSitemap(&$out) { 
 		//$out[] = OIDplus::getSystemUrl().'?goto='.urlencode('com.frdlweb.freeweid'); 
-	//}
+	//	 $out[] = OIDplus::getSystemUrl().'?goto='.urlencode('oidplus:system'); 
+	 }
 
  }//class	
 }//plugin ns
