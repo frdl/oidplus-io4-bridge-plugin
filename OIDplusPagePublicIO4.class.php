@@ -251,7 +251,7 @@ class OIDplusPagePublicIO4 extends OIDplusPagePluginAdmin //OIDplusPagePluginPub
 		$mails = static::parse_mail_addresses($content);
 		foreach($mails as $num => $m){
 		//	print_r($m);
-			if( OIDplus::baseConfig()->getValue('FRDLWEB_ALIAS_PROVIDER', 'alias.webfan.de' ) !== $m['provider']			  
+			if( OIDplus::baseConfig()->getValue('FRDLWEB_ALIAS_PROVIDER', 'profalias.webfan.de' ) !== $m['provider']			  
 			    && !OIDplus::authUtils()->isRALoggedIn($m['handle']) 			   
 			   && 'wehowski.de' !== $m['provider']	
 			   && 'webfan.de' !== $m['provider']
@@ -266,13 +266,13 @@ class OIDplusPagePublicIO4 extends OIDplusPagePluginAdmin //OIDplusPagePluginPub
 		    	$content = str_replace($m['handle'], $replace, $content);
 				*/
 				
-				$Grofil = new \Webfan\Grofil(OIDplus::baseConfig()->getValue('FRDLWEB_ALIAS_PROVIDER', 'alias.webfan.de' ), $m['handle']);
+				$Grofil = new \Webfan\Grofil(OIDplus::baseConfig()->getValue('FRDLWEB_ALIAS_PROVIDER', 'profalias.webfan.de' ), $m['handle']);
 				$mailto = $Grofil->url($m['handle'], 'webfan', 'mailto', null);
 			
-				$m = explode(':', $mailto, 2);
-				 $replace = $m[1];	
-		//	return($replace.__FILE__.__LINE__);
+				$p = explode(':', $mailto, 2);
+				 $replace = $p[1];	
 				
+			 
 				$content = str_replace($m['handle'], $replace, $content);
 			}
 		}
@@ -561,7 +561,7 @@ REGEXP, $string, $matches, \PREG_PATTERN_ORDER);
 	   ){	
 	  // var_dump($REQUEST_URI, $request, $rel_url_original, $rel_url, $requestMethod);
 	 //	die(basename(__FILE__).__LINE__);
-		// ob_end_clean();
+		  ob_end_clean();
 		 ignore_user_abort(true);
          header("Refresh:5; url=?goto=oidplus:system");
          header('Connection: close') ;
@@ -600,10 +600,13 @@ REGEXP, $string, $matches, \PREG_PATTERN_ORDER);
 					OIDplus::baseConfig()->getValue('COOKIE_DOMAIN', $_SERVER['SERVER_NAME']) ,
 													OIDplusConfig::PROTECTION_EDITABLE, function ($value) {
 		       
-			  	OIDplus::baseConfig()->setValue('TENANCY_CENTRAL_DOMAIN', $value );
+			 if(! OIDplus::isTenant() ){
+				 OIDplus::baseConfig()->setValue('TENANCY_CENTRAL_DOMAIN', $value );
+			 }
 		});		
 		if(empty(OIDplus::baseConfig()->getValue('TENANCY_CENTRAL_DOMAIN'))
 		   && $_SERVER['SERVER_NAME'] === $_SERVER['HTTP_HOST']
+		   && ! OIDplus::isTenant() 
 		  ){
 			OIDplus::baseConfig()->setValue('TENANCY_CENTRAL_DOMAIN', 
 											OIDplus::baseConfig()->getValue('COOKIE_DOMAIN', $_SERVER['SERVER_NAME']) );
@@ -645,19 +648,23 @@ REGEXP, $string, $matches, \PREG_PATTERN_ORDER);
 			 && OIDplus::baseConfig()->getValue('TENANCY_CENTRAL_DOMAIN') !== $_SERVER['SERVER_NAME'] 
 		     && is_dir(OIDplus::localpath('userdata/tenant').$tenantDirFromHost.'/')
 			){
-
+			
+				$_SERVER['HTTP_HOST'] = $tenantDirFromHost;
+					   OIDplus::forceTenantSubDirName(
+						 $tenantDirFromHost
+				 );
 			         //  return OIDplus::init($html);
 		//	die($tenantDirFromHost);
 			$testUrl = 'https://'.$tenantDirFromHost.'/systeminfo.php?goto=oidplus:system';
 			if($this->get_http_response_code($testUrl) === 200){
                $redirectUrl = 'https://'.$tenantDirFromHost.$_SERVER['REQUEST_URI'];
-               header('Location: '.$redirectUrl, 302);
-			   die('<a href="'.$redirectUrl.'">Go to '.$redirectUrl.'</a>');
+            //   header('Location: '.$redirectUrl, 302);
+			//   die('<a href="'.$redirectUrl.'">Go to '.$redirectUrl.'</a>');
 			}else{  			  			    
-				$_SERVER['HTTP_HOST'] = $tenantDirFromHost;
-					   OIDplus::forceTenantSubDirName(
-						 $tenantDirFromHost
-				 );
+                   
+			}
+			if(true === $html){
+				OIDplus::init(false);
 			}
 		  }
 		
@@ -689,8 +696,8 @@ REGEXP, $string, $matches, \PREG_PATTERN_ORDER);
 		});		
 		
 		OIDplus::config()->prepareConfigKey('FRDLWEB_ALIAS_PROVIDER', 
-												'Alias Service Provider Domain (e.g.: "alias.webfan.de"). Alias and privacy service (e.g. mail-hashes for privacy and relation-mappings)',
-												'alias.webfan.de', OIDplusConfig::PROTECTION_EDITABLE, function ($value) {
+												'Alias Service Provider Domain (e.g.: "profalias.webfan.de"). Alias and privacy service (e.g. mail-hashes for privacy and relation-mappings)',
+												'profalias.webfan.de', OIDplusConfig::PROTECTION_EDITABLE, function ($value) {
  
 			 	OIDplus::baseConfig()->setValue('FRDLWEB_ALIAS_PROVIDER', $value );
 		});				
