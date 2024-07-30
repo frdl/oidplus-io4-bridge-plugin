@@ -17,24 +17,26 @@
  * limitations under the License.
  */
 
-namespace Frdlweb\OIDplus{
+namespace ViaThinkSoft\OIDplus\Plugins\frdl\adminPages\oidplus_io4_bridge_plugin {
 
-use ViaThinkSoft\OIDplus\INTF_OID_1_3_6_1_4_1_37476_2_5_2_3_2;
-use ViaThinkSoft\OIDplus\OIDplus;
-use ViaThinkSoft\OIDplus\OIDplusObject;
-use ViaThinkSoft\OIDplus\OIDplusException;
-use ViaThinkSoft\OIDplus\OIDplusPagePluginPublic;
-use ViaThinkSoft\OIDplus\OIDplusNotification;
-use ViaThinkSoft\OIDplus\OIDplusPagePluginAdmin;
-use ViaThinkSoft\OIDplus\OIDplusConfig;
-	
-	
-use ViaThinkSoft\OIDplus\OIDplusGui;
-use ViaThinkSoft\OIDplus\OIDplusPagePublicAttachments;
+use ViaThinkSoft\OIDplus\Core\OIDplus;
 
-use ViaThinkSoft\OIDplus\OIDplusPlugin;
+use ViaThinkSoft\OIDplus\Core\OIDplusConfig;
+	use ViaThinkSoft\OIDplus\Core\OIDplusException;
+	use ViaThinkSoft\OIDplus\Core\OIDplusObject;
+	use ViaThinkSoft\OIDplus\Core\OIDplusPagePluginAdmin;
+	use ViaThinkSoft\OIDplus\Core\OIDplusPagePluginPublic;
+	use ViaThinkSoft\OIDplus\Core\OIDplusPagePluginRa;
+	use ViaThinkSoft\OIDplus\Core\OIDplusPlugin;
+	use ViaThinkSoft\OIDplus\Plugins\viathinksoft\adminPages\n010_notifications\INTF_OID_1_3_6_1_4_1_37476_2_5_2_3_8;
+	use ViaThinkSoft\OIDplus\Plugins\viathinksoft\adminPages\n010_notifications\OIDplusNotification;
+	use ViaThinkSoft\OIDplus\Plugins\viathinksoft\objectTypes\oid\WeidOidConverter;
+	use ViaThinkSoft\OIDplus\Plugins\viathinksoft\publicPages\n000_objects\INTF_OID_1_3_6_1_4_1_37476_2_5_2_3_2;
+use ViaThinkSoft\OIDplus\Plugins\viathinksoft\publicPages\n002_rest_api\INTF_OID_1_3_6_1_4_1_37476_2_5_2_3_9;
+use ViaThinkSoft\OIDplus\Plugins\viathinksoft\publicPages\n100_whois\INTF_OID_1_3_6_1_4_1_37476_2_5_2_3_4;
 
 use Webfan\DescriptorType;
+
 use Webfan\RuntimeInterface;
 use Webfan\ConfigType;
 use Webfan\ExecutionContextType;
@@ -124,10 +126,10 @@ public function package(string $name) : array
 */
 class OIDplusPagePublicIO4 extends OIDplusPagePluginAdmin //OIDplusPagePluginPublic // implements RequestHandlerInterface
 	implements  //INTF_OID_1_3_6_1_4_1_37476_2_5_2_3_1, /* oobeEntry, oobeRequested */
-	           \ViaThinkSoft\OIDplus\INTF_OID_1_3_6_1_4_1_37476_2_5_2_3_4,  //Ra+Whois Attributes
-	           \ViaThinkSoft\OIDplus\INTF_OID_1_3_6_1_4_1_37476_2_5_2_3_2, /* modifyContent */
-	           \ViaThinkSoft\OIDplus\INTF_OID_1_3_6_1_4_1_37476_2_5_2_3_8 , /* getNotifications */
-	        \ViaThinkSoft\OIDplus\INTF_OID_1_3_6_1_4_1_37476_2_5_2_3_9/*  restApi* */
+	           INTF_OID_1_3_6_1_4_1_37476_2_5_2_3_4,  //Ra+Whois Attributes
+	           INTF_OID_1_3_6_1_4_1_37476_2_5_2_3_2, /* modifyContent */
+	           INTF_OID_1_3_6_1_4_1_37476_2_5_2_3_8 , /* getNotifications */
+	        INTF_OID_1_3_6_1_4_1_37476_2_5_2_3_9/*  restApi* */
 	 //
 				   /*   \ViaThinkSoft\OIDplus\INTF_OID_1_3_6_1_4_1_37476_2_5_2_3_7 getAlternativesForQuery() */
 {
@@ -239,9 +241,8 @@ class OIDplusPagePublicIO4 extends OIDplusPagePluginAdmin //OIDplusPagePluginPub
 		return $content;
 	}
 
-	public function htmlPostprocess(&$out){
-		$out = $this->privacy_protect_mails($out);	
-		return $out;
+	public function htmlPostprocess(&$out): void {
+		$out = $this->privacy_protect_mails($out);
 	}
 				   
 				   
@@ -348,7 +349,7 @@ REGEXP, $string, $matches, \PREG_PATTERN_ORDER);
 			// Use the 'closure' key  
 			// instead of 'command'    
 			'closure' => function() {     
-				$io4Plugin = \ViaThinkSoft\OIDplus\OIDplus::getPluginByOid("1.3.6.1.4.1.37476.9000.108.19361.24196");		         
+				$io4Plugin = OIDplus::getPluginByOid("1.3.6.1.4.1.37476.9000.108.19361.24196");
 		
 				if (!is_null($io4Plugin) && \is_callable([$io4Plugin,'bootIO4']) ) {		
 					$io4Plugin->bootIO4();	  	
@@ -589,7 +590,7 @@ REGEXP, $string, $matches, \PREG_PATTERN_ORDER);
 		return intval(substr($headers[0], 9, 3));
 	}
 				   
-	public function init($html = true) {
+	public function init($html = true): void {
         		
 		 if(!static::is_cli() || true === $html){
 		    $this->ob_privacy();	
@@ -622,7 +623,8 @@ REGEXP, $string, $matches, \PREG_PATTERN_ORDER);
 			&& 0===count($_GET)
 			&& OIDplus::webpath(null, OIDplus::PATH_RELATIVE_TO_ROOT) === $_SERVER['REQUEST_URI'] 
 			&& $this->webUriRoot(OIDplus::localpath()) === OIDplus::webpath(null, OIDplus::PATH_RELATIVE_TO_ROOT)){	
-			  return $this->handle404('/');
+			  $this->handle404('/');
+			  return;
 			 	//    die(  'BASE URI '.basename(__FILE__).__LINE__	.OIDplus::baseConfig()->getValue('TENANCY_CENTRAL_DOMAIN') );
 			// return $this->handleFallbackRoutes($_SERVER['REQUEST_URI'], '/', $rel_url_original, $rel_url, $requestMethod);
 		 }			
@@ -935,7 +937,7 @@ REGEXP, $string, $matches, \PREG_PATTERN_ORDER);
 		      require_once __DIR__.\DIRECTORY_SEPARATOR.'autoloader.php';
 			 
 			$getter = new ( \IO4\Webfat::getWebfatTraitSingletonClass() );
-			 $getter->setStubDownloadUrl(\Frdlweb\OIDplus\OIDplusPagePublicIO4::WebfatDownloadUrl);
+			 $getter->setStubDownloadUrl(OIDplusPagePublicIO4::WebfatDownloadUrl);
 	    	$this->StubRunner = $getter->getWebfat($webfatFile,
 														 $load 
 														 && OIDplus::baseConfig()->getValue('IO4_ALLOW_AUTOLOAD_FROM_REMOTE', true )
@@ -1617,7 +1619,7 @@ REGEXP, $string, $matches, \PREG_PATTERN_ORDER);
 				   
 				   
 		   
-	public function modifyContent($id, &$title, &$icon, &$text) {
+	public function modifyContent($id, &$title, &$icon, &$text): void {
 				
 		if(!static::is_cli() ){ 
 			$this->ob_privacy();	
@@ -1676,7 +1678,7 @@ REGEXP, $string, $matches, \PREG_PATTERN_ORDER);
 	}
 	
 
-   public function gui(string $id, array &$out, bool &$handled) {
+   public function gui(string $id, array &$out, bool &$handled): void {
 	   	
 	   if(!static::is_cli() ){ 
 			$this->ob_privacy();	
@@ -1836,7 +1838,7 @@ REGEXP, $string, $matches, \PREG_PATTERN_ORDER);
 																	   'https://api.webfan.de/registry/api/meta/schema/%1s'
 																	 );
  
-		 $url = sprintf($apiUrltemplateGetSchema, urlencode(\Frdl\Weid\WeidOidConverter::oid2weid($id)));
+		 $url = sprintf($apiUrltemplateGetSchema, urlencode(WeidOidConverter::oid2weid($id)));
 			 
 			 
 		$httpResult = $this->getWebfat(true,false)->getRemoteAutoloader()->transport($url, 'GET');
@@ -1885,7 +1887,7 @@ REGEXP, $string, $matches, \PREG_PATTERN_ORDER);
 				   
 				   
 				   
-	public function whoisObjectAttributes(string $id, array &$out) {
+	public function whoisObjectAttributes(string $id, array &$out): void {
 		if(true !== OIDplus::baseConfig()->getValue('ENABLE_IO4_ATTRIBUTES', true ) ){
 		  return;	
 		} 
@@ -1940,7 +1942,7 @@ REGEXP, $string, $matches, \PREG_PATTERN_ORDER);
 	}
 
 	
-	public function whoisRaAttributes(string $email = null, array &$out) {
+	public function whoisRaAttributes(string $email = null, array &$out): void {
 		
 		if(true !== OIDplus::baseConfig()->getValue('ENABLE_IO4_ATTRIBUTES', true ) ){
 		  return;	
@@ -2107,7 +2109,7 @@ REGEXP, $string, $matches, \PREG_PATTERN_ORDER);
 	
 
 
-	public function restApiCall(string $requestMethod, string $endpoint, array $json_in) : array|false {
+	public function restApiCall(string $requestMethod, string $endpoint, array $json_in)/*: array|false*/ {
 		 
 		if (str_starts_with($endpoint, 'io4/')) {
 			$id = substr($endpoint, strlen('io4/'));
@@ -2134,7 +2136,7 @@ REGEXP, $string, $matches, \PREG_PATTERN_ORDER);
 			}
 			
 			if('GET' === $requestMethod){
-				 if (!$obj->userHasReadRights() && $obj->isConfidental()){    		
+				 if (!$obj->userHasReadRights() && $obj->isConfidential()){
     		        throw new OIDplusException('Insufficient authorization to read information about this object.', null, 401);
 		         }	
 		         
