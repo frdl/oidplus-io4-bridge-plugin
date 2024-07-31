@@ -17,26 +17,28 @@
  * limitations under the License.
  */
 
-namespace Frdlweb\OIDplus\Plugins\AdminPages\Io4Bridge {
+namespace Frdlweb\OIDplus\Plugins\AdminPages\IO4 {
 
-use ViaThinkSoft\OIDplus\Core\OIDplus;
 
-use ViaThinkSoft\OIDplus\Core\OIDplusConfig;
+	use ViaThinkSoft\OIDplus\Core\OIDplus;
+	use ViaThinkSoft\OIDplus\Core\OIDplusConfig;
 	use ViaThinkSoft\OIDplus\Core\OIDplusException;
 	use ViaThinkSoft\OIDplus\Core\OIDplusObject;
-	use ViaThinkSoft\OIDplus\Core\OIDplusPagePluginAdmin;
 	use ViaThinkSoft\OIDplus\Core\OIDplusPagePluginPublic;
 	use ViaThinkSoft\OIDplus\Core\OIDplusPagePluginRa;
 	use ViaThinkSoft\OIDplus\Core\OIDplusPlugin;
-	use ViaThinkSoft\OIDplus\Plugins\AdminPages\Notifications\INTF_OID_1_3_6_1_4_1_37476_2_5_2_3_8;
+
+	use ViaThinkSoft\OIDplus\Core\OIDplusPagePluginAdmin;
 	use ViaThinkSoft\OIDplus\Plugins\AdminPages\Notifications\OIDplusNotification;
 	use ViaThinkSoft\OIDplus\Plugins\ObjectTypes\OID\WeidOidConverter;
+	use ViaThinkSoft\OIDplus\Plugins\PublicPages\Whois\INTF_OID_1_3_6_1_4_1_37476_2_5_2_3_4;
 	use ViaThinkSoft\OIDplus\Plugins\PublicPages\Objects\INTF_OID_1_3_6_1_4_1_37476_2_5_2_3_2;
-use ViaThinkSoft\OIDplus\Plugins\PublicPages\RestApi\INTF_OID_1_3_6_1_4_1_37476_2_5_2_3_9;
-use ViaThinkSoft\OIDplus\Plugins\PublicPages\Whois\INTF_OID_1_3_6_1_4_1_37476_2_5_2_3_4;
+	use ViaThinkSoft\OIDplus\Plugins\AdminPages\Notifications\INTF_OID_1_3_6_1_4_1_37476_2_5_2_3_8;
+	use ViaThinkSoft\OIDplus\Plugins\PublicPages\RestApi\INTF_OID_1_3_6_1_4_1_37476_2_5_2_3_9;
+
+
 
 use Webfan\DescriptorType;
-
 use Webfan\RuntimeInterface;
 use Webfan\ConfigType;
 use Webfan\ExecutionContextType;
@@ -51,7 +53,7 @@ use League\Pipeline\StageInterface;
 
 use frdlweb\StubHelperInterface;
 use frdlweb\StubRunnerInterface;
-use Frdlweb\WebAppInterface;
+use Frdlweb\WebAppInterface; 
 
 use InvalidArgumentException;
 
@@ -88,7 +90,7 @@ use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Server\RequestHandlerInterface;
 use Psr\Http\Server\MiddlewareInterface;
 
-use LogicException;
+use LogicException; 
 use Spatie\Once\Backtrace as SpatieBacktrace;
 use Spatie\Once\Cache as SpatieCache;
 
@@ -107,19 +109,19 @@ use ActivityPub\Config\ActivityPubConfig;
 
 use ActivityPub\Utils\Logger;
 use Monolog\Logger as MonoLogger;
-
+	
 use Jobby\Jobby;
 use Opis\Closure\SerializableClosure;
 use Jobby\Exception;
-
+	
 
 // phpcs:disable PSR1.Files.SideEffects
 \defined('INSIDE_OIDPLUS') or die;
 // phpcs:enable PSR1.Files.SideEffects
 
+ 
 
-
-/*
+/*  
 API:
 public function packagist(string $method, array $params = [])
 public function package(string $name) : array
@@ -131,22 +133,22 @@ class OIDplusPagePublicIO4 extends OIDplusPagePluginAdmin //OIDplusPagePluginPub
 	           INTF_OID_1_3_6_1_4_1_37476_2_5_2_3_8 , /* getNotifications */
 	        INTF_OID_1_3_6_1_4_1_37476_2_5_2_3_9/*  restApi* */
 	 //
-				   /*   \ViaThinkSoft\OIDplus\INTF_OID_1_3_6_1_4_1_37476_2_5_2_3_7 getAlternativesForQuery() */
+				   /*   INTF_OID_1_3_6_1_4_1_37476_2_5_2_3_7 getAlternativesForQuery() */
 {
 
-	public const WebfatDownloadUrl = 'https://packages.frdl.de/raw/webfan/website/webfan.setup.php';
-
-	const PAGE_ID_COMPOSER = 'oidplus:io4:composer';
-	const PAGE_ID_WEBFAT = 'webfan:webfat:setup';
-	const PAGE_ID_BRIDGE = 'webfan:io4:bridge';
+	public const WebfatDownloadUrl = 'https://packages.frdl.de/raw/webfan/website/webfan.setup.php';	   
+				   
+	const PAGE_ID_COMPOSER = 'oidplus:io4:composer';	
+	const PAGE_ID_WEBFAT = 'webfan:webfat:setup';	
+	const PAGE_ID_BRIDGE = 'webfan:io4:bridge';		   
 	const PAGES = [
 		    'webfan:io4:bridge' => 'gui_PAGE_ID_BRIDGE',
 		    'webfan:webfat:setup' => 'gui_PAGE_ID_WEBFAT',
 		    'oidplus:io4:composer' => 'gui_PAGE_ID_COMPOSER',
-
+		
 		];
-		/*
-		[
+		/* 
+		[ 
 				"oiplus-plugin-public-pages",
 				"oiplus-plugin-ra-pages",
 				"oiplus-plugin-admin-pages",
@@ -161,37 +163,37 @@ class OIDplusPagePublicIO4 extends OIDplusPagePluginAdmin //OIDplusPagePluginPub
 			"project",
 			"library"
 		],
-		*/
-   	protected $AppLauncher = null;
-    protected $_containerDeclared = false;
-	protected $StubRunner = null;
-
-
+		*/				   
+   	protected $AppLauncher = null;		
+    protected $_containerDeclared = false;		
+	protected $StubRunner = null;		
+	
+	
 	protected $schemaCacheDir;
 	protected $schemaCacheExpires;
-
+				   
 	protected $packagistCacheDir;
 	protected $packagistExpires;
-
+				   
 	protected $packagistClient = null;
 	protected $composerUI = null;
 
 	/**
 	 * @var int
 	 */
-	public function __construct() {
+	public function __construct() { 
 		$this->packagistCacheDir = OIDplus::baseConfig()->getValue('IO4_PACKAGIST_CACHE_DIRECTORY',
 																   OIDplus::localpath().'userdata/cache/' );
 		$this->packagistExpires = OIDplus::baseConfig()->getValue('IO4_PACKAGIST_CACHE_EXPIRES', 15 * 60 );
-
+		
 		$this->schemaCacheDir = OIDplus::baseConfig()->getValue('SCHEMA_CACHE_DIRECTORY', OIDplus::localpath().'userdata/cache/' );
-		$this->schemaCacheExpires = OIDplus::baseConfig()->getValue('SCHEMA_CACHE_EXPIRES', 60 * 60 );
-
-		if(!static::is_cli() ){
-			$this->ob_privacy();
+		$this->schemaCacheExpires = OIDplus::baseConfig()->getValue('SCHEMA_CACHE_EXPIRES', 60 * 60 );		
+		
+		if(!static::is_cli() ){ 
+			$this->ob_privacy();	
 		}
-	}
-
+	}				
+			
 	public static function is_cli()
 {
     if ( defined('STDIN') )
@@ -208,10 +210,10 @@ class OIDplusPagePublicIO4 extends OIDplusPagePluginAdmin //OIDplusPagePluginPub
         return true;
     }
 
-    if ( empty($_SERVER['REMOTE_ADDR']) and !isset($_SERVER['HTTP_USER_AGENT']) and count($_SERVER['argv']) > 0)
+    if ( empty($_SERVER['REMOTE_ADDR']) and !isset($_SERVER['HTTP_USER_AGENT']) and count($_SERVER['argv']) > 0) 
     {
         return true;
-    }
+    } 
 
     if ( !array_key_exists('REQUEST_METHOD', $_SERVER) )
     {
@@ -219,215 +221,216 @@ class OIDplusPagePublicIO4 extends OIDplusPagePluginAdmin //OIDplusPagePluginPub
     }
 
     return false;
-	}
-
-
+	}			   
+				   
+				   
 	protected static $ob_privacy_set = false;
-
+				   
 	public function ob_privacy(){
 		if(true === static::$ob_privacy_set && ob_get_level() > 5 ){
-		   return;
+		   return;	
 		}
-		static::$ob_privacy_set = true;
-		ob_start([$this, 'ob_privacy_handler']);
+		static::$ob_privacy_set = true; 
+		ob_start([$this, 'ob_privacy_handler']); 
 	}
-
+				   
 	public function ob_privacy_handler(string $content) : string {
 		if(1 == intval(OIDplus::baseConfig()->getValue('FRDLWEB_PRIVACY_HIDE_MAILS', 1 ) )
-		   && !OIDplus::authUtils()->isAdminLoggedIn()
+		   && !OIDplus::authUtils()->isAdminLoggedIn() 
 		  ){
-           $content  = $this->privacy_protect_mails($content);
+           $content  = $this->privacy_protect_mails($content);			
 		}
 		return $content;
 	}
 
 	public function htmlPostprocess(&$out): void {
-		$out = $this->privacy_protect_mails($out);
+		$out = $this->privacy_protect_mails($out);	
 	}
-
-
+				   
+				   
 	public static function hashMails($content){
 	//	$m = $this->parse_mail_addresses($content);
 		//$content .= print_r($this->parse_mail_addresses($content), true);
 		$mails = static::parse_mail_addresses($content);
 		foreach($mails as $num => $m){
 		//	print_r($m);
-			if( OIDplus::baseConfig()->getValue('FRDLWEB_ALIAS_PROVIDER', 'profalias.webfan.de' ) !== $m['provider']
-			    && !OIDplus::authUtils()->isRALoggedIn($m['handle'])
-			   && 'wehowski.de' !== $m['provider']
+			if( OIDplus::baseConfig()->getValue('FRDLWEB_ALIAS_PROVIDER', 'profalias.webfan.de' ) !== $m['provider']			  
+			    && !OIDplus::authUtils()->isRALoggedIn($m['handle']) 			   
+			   && 'wehowski.de' !== $m['provider']	
 			   && 'webfan.de' !== $m['provider']
-			   && 'weid.info' !== $m['provider']
-			   && 'oid.zone' !== $m['provider']
+			   && 'weid.info' !== $m['provider']	
+			   && 'oid.zone' !== $m['provider']		
+			   && 'iana.org' !== $m['provider']	
 			//   && OIDplus::baseConfig()->getValue('TENANT_APP_ID_OID' ) !== $m['handle']
-			   && 'frdl.de' !== $m['provider']
+			   && 'frdl.de' !== $m['provider']		 
 			  ) {
 				/*
 			     $replace = 'PIDH'.str_pad(strlen($m['handle']), 4, "0", \STR_PAD_LEFT).'-'.sha1($m['handle'])
 				 . '@'. OIDplus::baseConfig()->getValue('FRDLWEB_ALIAS_PROVIDER', 'alias.webfan.de' );
 		    	$content = str_replace($m['handle'], $replace, $content);
 				*/
-
+				
 				$Grofil = new \Webfan\Grofil(OIDplus::baseConfig()->getValue('FRDLWEB_ALIAS_PROVIDER', 'profalias.webfan.de' ), $m['handle']);
 				$mailto = $Grofil->url($m['handle'], 'webfan', 'mailto', null);
-
+			
 				$p = explode(':', $mailto, 2);
-				 $replace = $p[1];
-
-
+				 $replace = $p[1];	
+				
+			 
 				$content = str_replace($m['handle'], $replace, $content);
 			}
 		}
-		return $content;
+		return $content;		
 	}
-
+				   
 	public function privacy_protect_mails($content){
 	  return static::hashMails($content);
 	}
-
-
+				   
+				   
 	public static function parse_mail_addresses($string){
        preg_match_all(<<<REGEXP
 /(?P<email>((?P<account>[\._a-zA-Z0-9-]+)@(?P<provider>[\._a-zA-Z0-9-]+)))/xsi
 REGEXP, $string, $matches, \PREG_PATTERN_ORDER);
-
+		
 		$ext = [];
-		foreach($matches[0] as $k => $v){
+		foreach($matches[0] as $k => $v){						
 		//	$ext[$matches['email'][$k]] =[
 			$ext[] =[
 				'handle'=>$matches['email'][$k],
 				'account'=>$matches['account'][$k],
 				'provider'=>$matches['provider'][$k],
-
+				
 			];
 		}
       return $ext;
-   }
-
-
+   }							   
+				   
+				   
 	public static function cronjobGetJobbyTasksFromPlugins($Jobby = null){
-
+		
 		$jobby = null !== $Jobby ? $Jobby : new Jobby();
-
+		
 		foreach(OIDplus::getAllPlugins() as $pkey => $plugin){
-
+		
 			if(method_exists($plugin, 'cronjobJobbyPrepareTasks')){
 				$jobby = \call_user_func_array([$plugin, 'cronjobJobbyPrepareTasks'], [$jobby]);
 			}
 		}
-
+		
 		return $jobby;
-	}
-
-    public static function cronjobGetJobbyTasksFromTable($Jobby = null){
+	}				   
+				   
+    public static function cronjobGetJobbyTasksFromTable($Jobby = null){ 
 
 		$jobby = null !== $Jobby ? $Jobby : new Jobby();
-
+		
 		$res = OIDplus::db()->query("select * from ###cron_and_jobs WHERE enabled = 1");
-
+		
 		//$res->naturalSortByField('id');
 		while ($job = $res->fetch_array()) {
            $job = array_filter($job);
            $job['closure'] = unserialize($job['command']);
            $jobName = $job['name'];
            unset($job['name']);
-
-			try {
-				$jobby->add($jobName, $job);
-			} catch (\Exception $e) {
+   
+			try {       
+				$jobby->add($jobName, $job);  
+			} catch (\Exception $e) {    
 				error_log($e->getMessage(), 0);
-			}
+			}		 		
 		}
-
+		 
 	  return $jobby;
 	}
-
-
+				   
+				   
 	public function cronjobJobbyPrepareTasks($Jobby = null){
 		$jobby = null !== $Jobby ? $Jobby : new Jobby();
-		//$this->bootIO4(   );
-		$jobby->add('bootIO4forpreload@1.3.6.1.4.1.37476.9000.108.19361.24196', [
-			// Use the 'closure' key
-			// instead of 'command'
-			'closure' => function() {
+		//$this->bootIO4(   );	
+		$jobby->add('bootIO4forpreload@1.3.6.1.4.1.37476.9000.108.19361.24196', [    
+			// Use the 'closure' key  
+			// instead of 'command'    
+			'closure' => function() {     
 				$io4Plugin = OIDplus::getPluginByOid("1.3.6.1.4.1.37476.9000.108.19361.24196");
-
-				if (!is_null($io4Plugin) && \is_callable([$io4Plugin,'bootIO4']) ) {
-					$io4Plugin->bootIO4();
-				}else{
-
+		
+				if (!is_null($io4Plugin) && \is_callable([$io4Plugin,'bootIO4']) ) {		
+					$io4Plugin->bootIO4();	  	
+				}else{					
+	
 				}
-
-				return true;
-			},
-
+				
+				return true;  
+			},   
+   
 			//hourly
 			'schedule' => '0 * * * *',
 		]);
-
-
-
-	   return $jobby;
+		
+		
+		
+	   return $jobby;	
 	}
-
-
-
-
+				   
+				   
+				   
+				   
 	public function cronjobRunJobby($Jobby = null){
 		$jobby = null !== $Jobby ? $Jobby : new Jobby();
-
+		
 		$jobby = static::cronjobGetJobbyTasksFromPlugins($jobby);
 		$jobby = static::cronjobGetJobbyTasksFromTable($jobby);
-
-		$jobby->run();
-
-	   return $jobby;
+		
+		$jobby->run();	
+		
+	   return $jobby;	
 	}
-
-
+				   
+				   
     public static function handleNext( $next, ?bool $skip404 = true ) {
 				if(is_bool($next)){
 					return $next;
 				}elseif(is_string($next)){
 					//return $next;
 					$next = static::out_html($next, 200);
-					(new \Laminas\HttpHandlerRunner\Emitter\SapiEmitter)->emit($next);
+					(new \Laminas\HttpHandlerRunner\Emitter\SapiEmitter)->emit($next);								    
 					die();
 					//return static::out_html($next);
-				}elseif(!is_null($next) && is_object($next) && $next instanceof \Psr\Http\Message\ResponseInterface){
+				}elseif(!is_null($next) && is_object($next) && $next instanceof \Psr\Http\Message\ResponseInterface){ 			   
 					  switch($next->getStatusCode()){
 						  case 404 :
 							  if(!$skip404){
-								  (new \Laminas\HttpHandlerRunner\Emitter\SapiEmitter)->emit($next);
+								  (new \Laminas\HttpHandlerRunner\Emitter\SapiEmitter)->emit($next);	
 							    die();
 							  }else{
 								  return false;
 							  }
 							  break;
-
+							 	 
 						  case 302 <= $next->getStatusCode() :
-							   (new \Laminas\HttpHandlerRunner\Emitter\SapiEmitter)->emit($next);
+							   (new \Laminas\HttpHandlerRunner\Emitter\SapiEmitter)->emit($next);	
 							    die();
 							  break;
-
+							  
 							  default :
-							    (new \Laminas\HttpHandlerRunner\Emitter\SapiEmitter)->emit($next);
+							    (new \Laminas\HttpHandlerRunner\Emitter\SapiEmitter)->emit($next);	
 							   die();
 							  break;
 					  }
-
-				 }elseif(!is_null($next) && (is_array($next) || is_object($next)  )){
-					OIDplus::invoke_shutdown();
-					@header('Content-Type:application/json; charset=utf-8');
-					echo json_encode($next);
-					exit;
+					
+				 }elseif(!is_null($next) && (is_array($next) || is_object($next)  )){								
+					OIDplus::invoke_shutdown();		
+					@header('Content-Type:application/json; charset=utf-8');			
+					echo json_encode($next);			
+					exit; 
 				}elseif(is_null($next) ){
 					 return false;
 				}else{
 					return $next;
 				}
 	}
-
-
+				   
+				   
 	/** c404=ErrorDocument
 	 * @param string $request
 	 * @return bool
@@ -436,63 +439,63 @@ REGEXP, $string, $matches, \PREG_PATTERN_ORDER);
      *  @ToDO ??? : Use PSR Standards? https://registry.frdl.de/?goto=php%3APsr%5CHttp%5CServer
 	 */
 	public function handle404(string $request): bool {
-
-
-		 if(!static::is_cli() ){
-		 	$this->ob_privacy();
+		
+			
+		 if(!static::is_cli() ){ 
+		 	$this->ob_privacy();	
 		 }
-
-		if (!isset($_SERVER['REQUEST_URI']) || !isset($_SERVER["REQUEST_METHOD"])) return false;
-
+		
+		if (!isset($_SERVER['REQUEST_URI']) || !isset($_SERVER["REQUEST_METHOD"])) return false; 
+		
 		$rel_url = false;
 		$rel_url_original =substr($_SERVER['REQUEST_URI'], strlen(OIDplus::webpath(null, OIDplus::PATH_RELATIVE_TO_ROOT)));
 		$requestMethod = $_SERVER["REQUEST_METHOD"];
         $next = false;
-
-		$baseInstaller = OIDplus::baseConfig()->getValue('FRDLWEB_INSTALLER_REMOTE_SERVER_RELATIVE_BASE_URI',
+		
+		$baseInstaller = OIDplus::baseConfig()->getValue('FRDLWEB_INSTALLER_REMOTE_SERVER_RELATIVE_BASE_URI', 
 																			'api/v1/io4/remote-installer/'
-											.OIDplus::baseConfig()->getValue('TENANT_OBJECT_ID_OID',
+											.OIDplus::baseConfig()->getValue('TENANT_OBJECT_ID_OID', 
 											OIDplus::baseConfig()->getValue('TENANT_REQUESTED_HOST', 'webfan/website' ) ));
-
+ 
 		if (str_starts_with($rel_url_original, $baseInstaller)) {
 			if(file_exists(__DIR__.\DIRECTORY_SEPARATOR.'installer-server'.\DIRECTORY_SEPARATOR.'index.web.php') ){
 				$installer_url_slug =trim(substr($rel_url_original,strlen($baseInstaller),strlen($rel_url_original)), '/ ');
-				define('WEBFAN_INSTALLER_INSTALLER', $installer_url_slug);
+				define('WEBFAN_INSTALLER_INSTALLER', $installer_url_slug);  
 				  require __DIR__.\DIRECTORY_SEPARATOR.'installer-server'.\DIRECTORY_SEPARATOR.'index.web.php';
 			//	return true;
-				  die();
+				  die();		
 			}
-		}
+		}	
+		
 
-
-
-			if (str_starts_with($rel_url_original, OIDplus::baseConfig()->getValue('FRDLWEB_CONTAINER_REMOTE_SERVER_RELATIVE_BASE_URI',
+		
+			if (str_starts_with($rel_url_original, OIDplus::baseConfig()->getValue('FRDLWEB_CONTAINER_REMOTE_SERVER_RELATIVE_BASE_URI', 
 																			'api/v1/io4/remote-container/'
-											.OIDplus::baseConfig()->getValue('TENANT_OBJECT_ID_OID',
-											OIDplus::baseConfig()->getValue('TENANT_REQUESTED_HOST', 'webfan/website' ) )
+											.OIDplus::baseConfig()->getValue('TENANT_OBJECT_ID_OID', 
+											OIDplus::baseConfig()->getValue('TENANT_REQUESTED_HOST', 'webfan/website' ) ) 
 
 
 																			))
-
+		   
 		   ) {
 			if(file_exists(__DIR__.\DIRECTORY_SEPARATOR.'container-server'.\DIRECTORY_SEPARATOR.'index.php') ){
 				  require __DIR__.\DIRECTORY_SEPARATOR.'container-server'.\DIRECTORY_SEPARATOR.'index.php';
-				  die();
+				  die();		
 				//return true;
 			}
-		}
+		}	
+			
+		
+		
+		
 
-
-
-
-
-
+			
 		 $args = [$_SERVER['REQUEST_URI'], $request, $rel_url_original, $rel_url, $requestMethod];
 		$next = \call_user_func_array([$this, 'handleFallbackRoutes'], $args);
 
-
+		
 		 //if(isset($_GET['test'])  )die($rel_url);
-	  if($next === false && false===$rel_url){
+	  if($next === false && false===$rel_url){  		 
 	   if(isset($_GET['c404']) && 'ErrorDocument' === $_GET['c404'] ){
 			// http_response_code(404);
 			// throw new OIDplusException(_L('Endpoint ErrorDocument for %s not found'), $request, 404);
@@ -507,21 +510,21 @@ REGEXP, $string, $matches, \PREG_PATTERN_ORDER);
 	  }elseif($next === false && false!==$rel_url){
 	     //  $next =  $this->handleFallbackRoutes($rel_url);
 	  }
-
+		
 		$next =static::handleNext( $next, true );
-
+		
 		return $next;
 	}
-
-	public static function out_html(string $html, ?int $code = 200, $callback = null, ?array $templateVars = []){
-		$contents = '';
-		$contents.=\is_callable($callback) ? $callback($html, $templateVars) : $html;
-		$response = new Response($code);
-		$response =  $response->withBody(\GuzzleHttp\Psr7\Utils::streamFor($contents));
+	 
+	public static function out_html(string $html, ?int $code = 200, $callback = null, ?array $templateVars = []){			
+		$contents = '';							
+		$contents.=\is_callable($callback) ? $callback($html, $templateVars) : $html;					
+		$response = new Response($code);			
+		$response =  $response->withBody(\GuzzleHttp\Psr7\Utils::streamFor($contents));	
 		return $response;
 	}
-
-
+								   
+	
 	public function webUriRoot($dir = null, $absolute = false)
 	{
 		if(null===$dir){
@@ -550,16 +553,16 @@ REGEXP, $string, $matches, \PREG_PATTERN_ORDER);
 
 		return $root;
 	}
-
+		
 
 	public function handleFallbackRoutes($REQUEST_URI, $request, $rel_url_original, $rel_url, $requestMethod){
 		$html = '';
-
+		
 	 if('/' === substr($request, -1)
 	   && $request === OIDplus::webpath(null, OIDplus::PATH_RELATIVE_TO_ROOT)
 	   && (0===count($_GET)
 	   && $this->webUriRoot(OIDplus::localpath()) === OIDplus::webpath(null, OIDplus::PATH_RELATIVE_TO_ROOT) )
-	   ){
+	   ){	
 	  // var_dump($REQUEST_URI, $request, $rel_url_original, $rel_url, $requestMethod);
 	 //	die(basename(__FILE__).__LINE__);
 		  ob_end_clean();
@@ -571,86 +574,86 @@ REGEXP, $string, $matches, \PREG_PATTERN_ORDER);
 		 loader_2.gif) no-repeat;">We are working on a new System feature</p><p>Page will reload soon, please wait...!<br />Neue Seite bald verfügbar!</p><img src="https://cdn.startdir.de/ajax-loader_2.gif" style="border:0px;" />';
 
 		// flush();
-		// die($html);
-		return $html;
+		 die($html);		
+		//return $html;
 	  }
-
+		
 	 /*	*/
 		//$uri = explode('?', $REQUEST_URI, 2)[0];
 		//$file = OIDplus::localpath().$uri;
 		//if(file_exists($file)){
-		//  die($file);
+		//  die($file);	
 		//}
 		return false;
 	}
-
-
-	public function get_http_response_code($url) {
-		$headers = \get_headers($url);
+				 				   
+	
+	public function get_http_response_code($url) {  
+		$headers = \get_headers($url);   
 		return intval(substr($headers[0], 9, 3));
 	}
-
+				   
 	public function init($html = true): void {
-
+        		
 		 if(!static::is_cli() || true === $html){
-		    $this->ob_privacy();
-		  }
-
-				OIDplus::config()->prepareConfigKey('TENANCY_CENTRAL_DOMAIN',
+		    $this->ob_privacy();	
+		  }	 
+			
+				OIDplus::config()->prepareConfigKey('TENANCY_CENTRAL_DOMAIN', 
 												'TENANCY_CENTRAL_DOMAIN',
 					OIDplus::baseConfig()->getValue('COOKIE_DOMAIN', $_SERVER['SERVER_NAME']) ,
 													OIDplusConfig::PROTECTION_EDITABLE, function ($value) {
-
+		       
 			 if(! OIDplus::isTenant() ){
 				 OIDplus::baseConfig()->setValue('TENANCY_CENTRAL_DOMAIN', $value );
 			 }
-		});
+		});		
 		if(empty(OIDplus::baseConfig()->getValue('TENANCY_CENTRAL_DOMAIN'))
 		   && $_SERVER['SERVER_NAME'] === $_SERVER['HTTP_HOST']
-		   && ! OIDplus::isTenant()
+		   && ! OIDplus::isTenant() 
 		  ){
-			OIDplus::baseConfig()->setValue('TENANCY_CENTRAL_DOMAIN',
+			OIDplus::baseConfig()->setValue('TENANCY_CENTRAL_DOMAIN', 
 											OIDplus::baseConfig()->getValue('COOKIE_DOMAIN', $_SERVER['SERVER_NAME']) );
 		}
-
-
+		
+		
 		$rel_url = false;
 		$rel_url_original =substr($_SERVER['REQUEST_URI'], strlen(OIDplus::webpath(null, OIDplus::PATH_RELATIVE_TO_ROOT)));
 		$requestMethod = $_SERVER["REQUEST_METHOD"];
-
-
-		 if('/' === substr($_SERVER['REQUEST_URI'], -1)
+		
+		
+		 if('/' === substr($_SERVER['REQUEST_URI'], -1)	  
 			&& 0===count($_GET)
-			&& OIDplus::webpath(null, OIDplus::PATH_RELATIVE_TO_ROOT) === $_SERVER['REQUEST_URI']
-			&& $this->webUriRoot(OIDplus::localpath()) === OIDplus::webpath(null, OIDplus::PATH_RELATIVE_TO_ROOT)){
+			&& OIDplus::webpath(null, OIDplus::PATH_RELATIVE_TO_ROOT) === $_SERVER['REQUEST_URI'] 
+			&& $this->webUriRoot(OIDplus::localpath()) === OIDplus::webpath(null, OIDplus::PATH_RELATIVE_TO_ROOT)){	
 			  $this->handle404('/');
 			  return;
 			 	//    die(  'BASE URI '.basename(__FILE__).__LINE__	.OIDplus::baseConfig()->getValue('TENANCY_CENTRAL_DOMAIN') );
 			// return $this->handleFallbackRoutes($_SERVER['REQUEST_URI'], '/', $rel_url_original, $rel_url, $requestMethod);
-		 }
+		 }			
 
-
-
+	        
+		
 		$tenantDirFromHost =  $_SERVER['HTTP_HOST'];
 	    if(substr($tenantDirFromHost, 0, strlen('www.'))==='www.'){
 			$tenantDirFromHost = substr($tenantDirFromHost, strlen('www.'), strlen($tenantDirFromHost) );
 		}
-
+		
 		$tenantDirFromHost = str_replace('---', '.', $tenantDirFromHost);
 		if (str_ends_with($tenantDirFromHost, OIDplus::baseConfig()->getValue('TENANCY_CENTRAL_DOMAIN'))) {
             $tenantDirFromHost = substr($tenantDirFromHost, 0, -1*strlen( OIDplus::baseConfig()->getValue('TENANCY_CENTRAL_DOMAIN')) );
 		}
 		$tenantDirFromHost = trim($tenantDirFromHost,'.');
-
+		
 	//	$tenantDirFromHost = trim(str_replace(OIDplus::baseConfig()->getValue('TENANCY_CENTRAL_DOMAIN'), '', $tenantDirFromHost),'.');
-
-		if(! OIDplus::isTenant()
-			 && OIDplus::baseConfig()->getValue('TENANCY_CENTRAL_DOMAIN') !== $_SERVER['HTTP_HOST']
+		 
+		if(! OIDplus::isTenant() 
+			 && OIDplus::baseConfig()->getValue('TENANCY_CENTRAL_DOMAIN') !== $_SERVER['HTTP_HOST'] 
 			 && OIDplus::baseConfig()->getValue('TENANCY_CENTRAL_DOMAIN') !== $tenantDirFromHost
-			 && OIDplus::baseConfig()->getValue('TENANCY_CENTRAL_DOMAIN') !== $_SERVER['SERVER_NAME']
+			 && OIDplus::baseConfig()->getValue('TENANCY_CENTRAL_DOMAIN') !== $_SERVER['SERVER_NAME'] 
 		     && is_dir(OIDplus::localpath('userdata/tenant').$tenantDirFromHost.'/')
 			){
-
+			
 				$_SERVER['HTTP_HOST'] = $tenantDirFromHost;
 					   OIDplus::forceTenantSubDirName(
 						 $tenantDirFromHost
@@ -662,17 +665,17 @@ REGEXP, $string, $matches, \PREG_PATTERN_ORDER);
                $redirectUrl = 'https://'.$tenantDirFromHost.$_SERVER['REQUEST_URI'];
             //   header('Location: '.$redirectUrl, 302);
 			//   die('<a href="'.$redirectUrl.'">Go to '.$redirectUrl.'</a>');
-			}else{
-
+			}else{  			  			    
+                   
 			}
 			if(true === $html){
 				OIDplus::init(false);
 			}
 		  }
-
-          if(! OIDplus::isTenant()
-			 && OIDplus::baseConfig()->getValue('TENANCY_CENTRAL_DOMAIN') !== $_SERVER['HTTP_HOST']
-			 && OIDplus::baseConfig()->getValue('TENANCY_CENTRAL_DOMAIN') !== $_SERVER['SERVER_NAME']
+		
+          if(! OIDplus::isTenant() 
+			 && OIDplus::baseConfig()->getValue('TENANCY_CENTRAL_DOMAIN') !== $_SERVER['HTTP_HOST'] 
+			 && OIDplus::baseConfig()->getValue('TENANCY_CENTRAL_DOMAIN') !== $_SERVER['SERVER_NAME'] 
 			 && OIDplus::baseConfig()->getValue('TENANCY_CENTRAL_DOMAIN') !== $tenantDirFromHost
 			){
 			  die(
@@ -680,55 +683,55 @@ REGEXP, $string, $matches, \PREG_PATTERN_ORDER);
 				.OIDplus::baseConfig()->getValue('TENANCY_CENTRAL_DOMAIN')
 			  );
 		  }
-
-		OIDplus::config()->prepareConfigKey('FRDLWEB_FRDL_WORKDIR',
+		
+		OIDplus::config()->prepareConfigKey('FRDLWEB_FRDL_WORKDIR', 
 												'Scope or Directory to save frdlweb framework source code in. Default=emty',
 												'', OIDplusConfig::PROTECTION_EDITABLE, function ($value) {
-
+		       
 			 	OIDplus::baseConfig()->setValue('FRDLWEB_FRDL_WORKDIR', $value );
-		});
-
-
-
-		OIDplus::config()->prepareConfigKey('FRDLWEB_PRIVACY_HIDE_MAILS',
+		});	
+		
+		
+		
+		OIDplus::config()->prepareConfigKey('FRDLWEB_PRIVACY_HIDE_MAILS', 
 												'Privacy Mail Protection Addon (1=default active)',
 												'1', OIDplusConfig::PROTECTION_EDITABLE, function ($value) {
 		        $value = intval($value);
 			 	OIDplus::baseConfig()->setValue('FRDLWEB_RDAP_PRIVACY_HIDE_MAILS', $value );
-		});
-
-		OIDplus::config()->prepareConfigKey('FRDLWEB_ALIAS_PROVIDER',
+		});		
+		
+		OIDplus::config()->prepareConfigKey('FRDLWEB_ALIAS_PROVIDER', 
 												'Alias Service Provider Domain (e.g.: "profalias.webfan.de"). Alias and privacy service (e.g. mail-hashes for privacy and relation-mappings)',
 												'profalias.webfan.de', OIDplusConfig::PROTECTION_EDITABLE, function ($value) {
-
+ 
 			 	OIDplus::baseConfig()->setValue('FRDLWEB_ALIAS_PROVIDER', $value );
-		});
-
-
-		OIDplus::config()->prepareConfigKey('FRDLWEB_CONTAINER_REMOTE_SERVER_RELATIVE_BASE_URI',
+		});				
+		
+		
+		OIDplus::config()->prepareConfigKey('FRDLWEB_CONTAINER_REMOTE_SERVER_RELATIVE_BASE_URI', 
 												'Uri relative to the OIDplus webBase to serve as endpoint for the container server https://packages.frdl.de/webfan/container-remote-server/archive/main.zip',
 												'api/v1/io4/remote-container/'
-											.OIDplus::baseConfig()->getValue('TENANT_OBJECT_ID_OID',
-											OIDplus::baseConfig()->getValue('TENANT_REQUESTED_HOST', 'webfan/website' ) )
-
+											.OIDplus::baseConfig()->getValue('TENANT_OBJECT_ID_OID', 
+											OIDplus::baseConfig()->getValue('TENANT_REQUESTED_HOST', 'webfan/website' ) ) 
+											
 											, OIDplusConfig::PROTECTION_EDITABLE, function ($value) {
-
+ 
 			 	OIDplus::baseConfig()->setValue('FRDLWEB_CONTAINER_REMOTE_SERVER_RELATIVE_BASE_URI', $value );
-		});
-
-
-		OIDplus::config()->prepareConfigKey('FRDLWEB_INSTALLER_REMOTE_SERVER_RELATIVE_BASE_URI',
+		});				
+		
+		
+		OIDplus::config()->prepareConfigKey('FRDLWEB_INSTALLER_REMOTE_SERVER_RELATIVE_BASE_URI', 
 												'Uri relative to the OIDplus webBase to serve as endpoint for the container server https://packages.frdl.de/webfan/installer-remote-server/archive/main.zip',
 												'api/v1/io4/remote-installer/'
-											.OIDplus::baseConfig()->getValue('TENANT_OBJECT_ID_OID',
-											OIDplus::baseConfig()->getValue('TENANT_REQUESTED_HOST', 'webfan/website' ) )
-
+											.OIDplus::baseConfig()->getValue('TENANT_OBJECT_ID_OID', 
+											OIDplus::baseConfig()->getValue('TENANT_REQUESTED_HOST', 'webfan/website' ) ) 
+											
 											, OIDplusConfig::PROTECTION_EDITABLE, function ($value) {
-
+ 
 			 	OIDplus::baseConfig()->setValue('FRDLWEB_INSTALLER_REMOTE_SERVER_RELATIVE_BASE_URI', $value );
-		});
-
-
+		});				
+				
+		
 		if (!OIDplus::db()->tableExists("###cron_and_jobs")) {
 			if (OIDplus::db()->getSlang()->id() == 'mysql') {
 				OIDplus::db()->query("CREATE TABLE IF NOT EXISTS ###cron_and_jobs
@@ -803,61 +806,61 @@ REGEXP, $string, $matches, \PREG_PATTERN_ORDER);
 			}
 		} else {
 			$this->db_table_exists = true;
-		}
-
-
-
-		if(!is_dir(__DIR__.\DIRECTORY_SEPARATOR.'installer-server'.\DIRECTORY_SEPARATOR)
-		   || !file_exists(__DIR__.\DIRECTORY_SEPARATOR.'installer-server'.\DIRECTORY_SEPARATOR.'composer.json')
+		}		
+		
+		
+		
+		if(!is_dir(__DIR__.\DIRECTORY_SEPARATOR.'installer-server'.\DIRECTORY_SEPARATOR) 
+		   || !file_exists(__DIR__.\DIRECTORY_SEPARATOR.'installer-server'.\DIRECTORY_SEPARATOR.'composer.json') 
 		  ){
 			$this->archiveDownloadTo(__DIR__.\DIRECTORY_SEPARATOR.'installer-server'.\DIRECTORY_SEPARATOR,
-									 'https://packages.frdl.de/webfan/installer-remote-server/archive/main.zip' );
+									 'https://packages.frdl.de/webfan/installer-remote-server/archive/main.zip' );			
 		}
-
-		if(!is_dir(__DIR__.\DIRECTORY_SEPARATOR.'container-server'.\DIRECTORY_SEPARATOR)
+		
+		if(!is_dir(__DIR__.\DIRECTORY_SEPARATOR.'container-server'.\DIRECTORY_SEPARATOR) 
 		   || !file_exists(__DIR__.\DIRECTORY_SEPARATOR.'container-server'.\DIRECTORY_SEPARATOR.'composer.json')  ){
 			$this->archiveDownloadTo(__DIR__.\DIRECTORY_SEPARATOR.'container-server'.\DIRECTORY_SEPARATOR,
 									 'https://packages.frdl.de/webfan/container-remote-server/archive/main.zip' );
-		}
-
+		}		
+			
 		if(!static::is_cli() || true === $html){
-		   $this->ob_privacy();
-		}elseif(false === $html
+		   $this->ob_privacy();	
+		}elseif(false === $html 
 				&& (
 					static::is_cli()
 					 || str_contains($_SERVER['REQUEST_URI'], '/cron.')
 					)
 			   ){
-		   $this->cronjobRunJobby();
-			// $this->bootIO4(   );
+		   $this->cronjobRunJobby();	
+			// $this->bootIO4(   );	
 		}
-
-
-
+		
+		
+					
 		       //	 if(isset($_GET['test'])){
 				 //	  $isTenant = OIDplus::isTenant();
 				//	die('$isTenant '.$isTenant.' '.__FILE__.__LINE__);
 				//	}
+		
 
-
-	//  if( '/' === $_SERVER['REQUEST_URI']){
+	//  if( '/' === $_SERVER['REQUEST_URI']){	
 	//      $this->handle404('/');
 	//  }
 	}//init
-
-
+	
+  
 	public function archiveDownloadTo(string $dir, string $archiveUrl ){
 		if(!is_dir($dir)){
-		  mkdir($dir, 0775, true);
+		  mkdir($dir, 0775, true);	
 		}
-
+		
 			$file =$dir. "package.zip";
-
-		if(!file_exists($file)){
-			file_put_contents($file, fopen($archiveUrl, 'r'));
-		}
-
-
+   
+		if(!file_exists($file)){	
+			file_put_contents($file, fopen($archiveUrl, 'r'));  
+		}		
+		
+		
 		$path = pathinfo(realpath($file), \PATHINFO_DIRNAME); // get the absolute path to $file (leave it as it is)
 
 	  $zip = new \ZipArchive;
@@ -868,32 +871,32 @@ REGEXP, $string, $matches, \PREG_PATTERN_ORDER);
 	  $zip->close();
 
 	//  echo "<strong>$file</strong> extracted to <strong>$path</strong><br>";
-	  if (file_exists($dir.\DIRECTORY_SEPARATOR.'composer.json') ) {
+	  if (file_exists($dir.\DIRECTORY_SEPARATOR.'composer.json') ) { 
 		  unlink($file);
 	  } else {
 	//	  echo "remember to delete <strong>$file</strong> & <strong>$script</strong>!";
 	  }
-
-
+	
+	 
  	} else {
 	 // echo "Couldn't open $file";
 		error_log(sprintf("Couldn't open %s in %s", $file, __METHOD__), 0);
 	}
-
+		
 	}//archiveDownloadTo
-
-
-
+				   
+				   
+				   
     public function bootIO4($Runner = null){
 		 if(null === $Runner){
-		    $Runner=$this->getWebfat(true,false);
+		    $Runner=$this->getWebfat(true,false);	 
 		 }
 		$Runner->init();
-		 $container = $Runner->getAsContainer(null);
+		 $container = $Runner->getAsContainer(null);	
+ 
+     $CircuitBreaker = $container->get('CircuitBreaker');	
 
-     $CircuitBreaker = $container->get('CircuitBreaker');
-
-    $check = $CircuitBreaker->protect(function() use($container){
+    $check = $CircuitBreaker->protect(function() use($container){	
      $check = $container->get('script@inc.common.bootstrap');
      if(!is_array($check) || !isset($check['success']) || true !== $check['success']){
       if(is_array($check) && isset($check['error']) ){
@@ -905,101 +908,101 @@ REGEXP, $string, $matches, \PREG_PATTERN_ORDER);
    }
 	  return $check;
   });
-
-
-		//if('cli' !== strtolower(substr(\php_sapi_name(), 0, 3))){
-	//		$container->get('script@service.html.bootstrap');
-		//}
+	
+	
+		//if('cli' !== strtolower(substr(\php_sapi_name(), 0, 3))){	
+	//		$container->get('script@service.html.bootstrap');	
+		//} 		
 
 	}
-
-
+				   
+				   
 	public function getWebfat(bool $load = true, bool $serveRequest = false/* load app */) {
 
-		$defDir = is_dir($_SERVER['DOCUMENT_ROOT'].\DIRECTORY_SEPARATOR.'..')
+		$defDir = is_dir($_SERVER['DOCUMENT_ROOT'].\DIRECTORY_SEPARATOR.'..') 
 			&&  is_writable($_SERVER['DOCUMENT_ROOT'].\DIRECTORY_SEPARATOR.'..')
 			? $_SERVER['DOCUMENT_ROOT'].\DIRECTORY_SEPARATOR.'..'.\DIRECTORY_SEPARATOR.'.frdl'
 			: __DIR__.\DIRECTORY_SEPARATOR.'.frdl';
-
+		
 		$d = OIDplus::baseConfig()->getValue('FRDLWEB_FRDL_WORKDIR', '@global' );
-		$frdlDir = !empty($d) && (is_dir($d) || is_writable(dirname($d))) ? $d : $defDir;
-
-		putenv('IO4_WORKSPACE_SCOPE="'.$frdlDir.'"');
+		$frdlDir = !empty($d) && (is_dir($d) || is_writable(dirname($d))) ? $d : $defDir; 
+		
+		putenv('IO4_WORKSPACE_SCOPE="'.$frdlDir.'"'); 
 	//	$_ENV['FRDL_WORKSPACE']=$frdlDir;
-
+		
 	     if(null === $this->StubRunner){
-
+			 
 		   $webfatFile =$this->getWebfatFile();
-
+			 
 			 if(!is_dir(dirname($webfatFile)) && dirname($webfatFile) !== $_SERVER['DOCUMENT_ROOT']){
-				mkdir(dirname($webfatFile), 0775, true);
+				mkdir(dirname($webfatFile), 0775, true); 
 			 }
 		      require_once __DIR__.\DIRECTORY_SEPARATOR.'autoloader.php';
-
+			 
 			$getter = new ( \IO4\Webfat::getWebfatTraitSingletonClass() );
-			 $getter->setStubDownloadUrl(OIDplusPagePublicIO4::WebfatDownloadUrl);
+			 $getter->setStubDownloadUrl(\Frdlweb\OIDplus\Plugins\AdminPages\IO4\OIDplusPagePublicIO4::WebfatDownloadUrl);
 	    	$this->StubRunner = $getter->getWebfat($webfatFile,
-														 $load
+														 $load 
 														 && OIDplus::baseConfig()->getValue('IO4_ALLOW_AUTOLOAD_FROM_REMOTE', true )
 														 , $serveRequest,
 														2592000,
 														$getter::$_stub_download_url );
-
-
-			 $this->StubRunner->getAsContainer(null)->set('app.$dir', $frdlDir);
+			 
+			 
+			 $this->StubRunner->getAsContainer(null)->set('app.$dir', $frdlDir);			 
 	    }//! $this->StubRunner | null
-
+		
 	//	if(true === $serveRequest){
 		//	 $this->bootIO4($this->StubRunner);
 		//}
 		return $this->StubRunner;
-	}
-
-	public function getWebfatFile() {
-	    // $webfatFile =OIDplus::localpath().'webfan.setup.php';
-	 //	$webfatFile =__DIR__.\DIRECTORY_SEPARATOR.'webfan-website'.\DIRECTORY_SEPARATOR.'webfan.setup.php';
+	} 
+				   
+	public function getWebfatFile() {	 
+	    // $webfatFile =OIDplus::localpath().'webfan.setup.php';	
+	 //	$webfatFile =__DIR__.\DIRECTORY_SEPARATOR.'webfan-website'.\DIRECTORY_SEPARATOR.'webfan.setup.php';	
 			$webfatFile =is_writable($_SERVER['DOCUMENT_ROOT'])
 				 ? $_SERVER['DOCUMENT_ROOT'].\DIRECTORY_SEPARATOR.'webfan.setup.php'
-				 : OIDplus::localpath().'webfan.setup.php';
+				 : OIDplus::localpath().'webfan.setup.php';	
 		//if(!is_dir(dirname($webfatFile))){
-		//  mkdir(dirname($webfatFile), 0775, true);
+		//  mkdir(dirname($webfatFile), 0775, true);	
 	//	}
 	     return $webfatFile;
-	}
+	} 				   
 
 	public function getWebfatSetupLink(){
            return OIDplus::webpath(dirname($this->getWebfatFile()),true).basename($this->getWebfatFile());
 	}
-
-
-
-
-
-
+				   
+   
+				   
+  
+				   
+				   
 	protected function composer(){
 	  if(null === $this->composerUI){
 	    if(!class_exists(\Webfan\ComposerAdapter\Installer::class, true)){
-		   $this->getWebfat(true, false);
+		   $this->getWebfat(true, false);	
 		}
 		$this->composerUI = new \Webfan\ComposerAdapter\Installer(OIDplus::localpath());
 	  }
 		return $this->composerUI;
 	}
-
+				   
 	protected function cc(){
 	  if(null === $this->packagistClient){
 	    if(!class_exists(\Packagist\Api\Client::class, true)){
-		   $this->getWebfat(true, false);
+		   $this->getWebfat(true, false);	
 		}
 		$this->packagistClient = new \Packagist\Api\Client();
 	  }
 		return $this->packagistClient;
 	}
-
+				   
 	public function getNotifications(string $user=null): array {
-		$notifications = array();
-		$notifications[] =
-			new OIDplusNotification('INFO', _L('Running <a href="%1">%2</a><br /><a href="%3">Webfan Webfat Setup (%4)</a>',
+		$notifications = array(); 
+		$notifications[] = 
+			new OIDplusNotification('INFO', _L('Running <a href="%1">%2</a><br /><a href="%3">Webfan Webfat Setup (%4)</a>', 
 											   OIDplus::gui()->link('oid:1.3.6.1.4.1.37476.9000.108.19361.24196'),
 											  htmlentities( 'OIDplus IO4 Bridge-Plugin' ),
 							                                  $this->getWebfatSetupLink(),
@@ -1007,9 +1010,9 @@ REGEXP, $string, $matches, \PREG_PATTERN_ORDER);
 											  )
 								   );
 		return $notifications;
-	}
+	}			
 
-
+				   
    protected function p_head(){
 	   return '
 	   <thead>
@@ -1018,7 +1021,7 @@ REGEXP, $string, $matches, \PREG_PATTERN_ORDER);
 		   <td><strong>Status</strong></td>
 		   <td><strong>Setup</strong></td>
 		 </tr>
-		</thead>
+		</thead> 
 	   ';
    }
    protected function p_row($name, $repository, $description, $status, $form){
@@ -1038,10 +1041,10 @@ REGEXP, $string, $matches, \PREG_PATTERN_ORDER);
 		   $form
         );
    }
-
+				   
    protected function p_status($name, $composer){
 	  return sprintf(
-    '
+    '  
 	  <table>
 	     <tr>
 		   <td>composer.json</td>
@@ -1052,8 +1055,8 @@ REGEXP, $string, $matches, \PREG_PATTERN_ORDER);
          isset($composer['require'][$name])? $composer['require'][$name] : '<span style="color:red;">uninstalled</span>'
         );
    }
-
-
+				   
+				   
 	public function package(string $name) : array {
 			     $cacheFile = $this->packagist_cache_file(['method'=>__METHOD__, 'params' => [$name]]);
 		         $out = $this->packagist_read_cache($cacheFile);
@@ -1061,7 +1064,7 @@ REGEXP, $string, $matches, \PREG_PATTERN_ORDER);
 					//$out =  $this->cc()->all(['type' => 'oiplus-plugin-object-types']);
 					 set_time_limit( (@ini_get('max_execution_time')) + 60 );
 					$p = \call_user_func_array([$this->cc(), 'get'], [$name]);
-					$r = new \ReflectionObject($p);
+					$r = new \ReflectionObject($p); 
 				    $methods = $r->getMethods();
 					$out = [];
 					foreach($methods as $m){
@@ -1071,26 +1074,26 @@ REGEXP, $string, $matches, \PREG_PATTERN_ORDER);
 						$n=strtolower($n);
 						$out[$n] = \call_user_func([$p, $m->getName()]);
 					}
-					$this->packagist_write_cache($out, $cacheFile);
+					$this->packagist_write_cache($out, $cacheFile); 
 				 }
-			      return (array)$out;
-	}
-
-
-
-
-
+			      return (array)$out; 
+	}				   
+				   
+ 
+				   
+				   
+				   
 	public function packagist(string $method, array $params = []){
 			     $cacheFile = $this->packagist_cache_file(['method'=>$method, 'params' => $params]);
 			     $out = $this->packagist_read_cache($cacheFile);
 			     if(!$out){
 					set_time_limit( (@ini_get('max_execution_time')) + 60 );
 					$out = \call_user_func_array([$this->cc(), $method], $params);
-					$this->packagist_write_cache($out, $cacheFile);
+					$this->packagist_write_cache($out, $cacheFile); 
 				 }
-			      return $out;
-	}
-
+			      return $out; 
+	}				   
+				   
 	protected function packagist_write_cache($out, string $cacheFile){
 		 file_put_contents($cacheFile, false===$out ? json_encode(false) : json_encode($out));
 	}
@@ -1106,7 +1109,7 @@ REGEXP, $string, $matches, \PREG_PATTERN_ORDER);
 			.'.json'
 			;
 		return $cacheFile;
-	}
+	}				   
 	protected function packagist_read_cache(string $cacheFile){
 		if (file_exists($cacheFile) && filemtime($cacheFile) >= time() - $this->packagistExpires) {
 			$out = json_decode(file_get_contents($cacheFile));
@@ -1115,25 +1118,25 @@ REGEXP, $string, $matches, \PREG_PATTERN_ORDER);
 			}
 		}
 		return false;
-	}
-
-
+	}					   
+				   
+				   
    public function gui_PAGE_ID_COMPOSER(string $id, array $out) {
 	   $href_example_composer = OIDplus::webpath(__DIR__,OIDplus::PATH_RELATIVE).'~composer.core.2.0.txt';
-
+ 
 		if ($id == self::PAGE_ID_COMPOSER && OIDplus::authUtils()->isAdminLoggedIn()) {
-
-
+		
+			
 		     $composer = json_decode(file_get_contents(OIDplus::localpath().'composer.json'));
 			 $composer = (array)$composer;
 			 $composer['require'] = (array)$composer['require'];
-
+			
              $out['title'] = _L('Composer Plugins');
-             $out['text'] .= ''
+             $out['text'] .= '' 
 				   .'Please take a look at the <a href="'.$href_example_composer.'" target="_blank">root composer.json example</a> to find out how the OIDplus composer plugin manager can be enabled. You MUST include the <b><i>trusted and allowed plugins sections</i></b> as in the example and you MUST require the package <b><i>frdl/oidplus-composer-plugin</i></b>! All composer-plugins (like the frdl/oidplus-composer-plugin, NOT the OIDplus-plugins-packages) MUST be listed <b>first</b> (after the php requirement) in the requirements section of the composer.json file, per composer spec.!';
-
-			/*
-		[
+			
+			/* 
+		[ 
 				"oiplus-plugin-public-pages",
 				"oiplus-plugin-ra-pages",
 				"oiplus-plugin-admin-pages",
@@ -1148,7 +1151,7 @@ REGEXP, $string, $matches, \PREG_PATTERN_ORDER);
 			"project",
 			"library"
 		],
-		*/
+		*/				
 			$pp_public = array();
 			$pp_ra = array();
 			$pp_admin = array();
@@ -1163,31 +1166,31 @@ REGEXP, $string, $matches, \PREG_PATTERN_ORDER);
 				if (is_subclass_of($plugin, OIDplusPagePluginAdmin::class)) {
 					$pp_admin[] = $plugin;
 				}
-			}
-
-
+			}	
+			
+			
 					$out['text'] .= '<h2>'._L('Public page plugins').'</h2>';
 					$out['text'] .= '<div class="container box"><div id="suboid_table" class="table-responsive">';
-
-
-
+			
+			
+						
 			   $packs = $this->packagist('all', [
 					  ['type' => 'oiplus-plugin-public-pages'],
 				  ]);
-
-
+			 
+			
 			    $out['text'] .= '<table>';
 			    $out['text'] .= $this->p_head();
 			    $out['text'] .= '<tbody>';
-			    foreach($packs as $pname){
+			    foreach($packs as $pname){ 
 				  	  $package = $this->package($pname);
 					  extract($package);
 					  $out['text'] .= $this->p_row($name, $repository, $description, $this->p_status($name, $composer), '');
 				}
 			   $out['text'] .= '</tbody>';
 			    $out['text'] .= '</table>';
-
-
+			
+			
       //    if ($show_pages_public) {
 				if (count($plugins = $pp_public) > 0) {
 					$out['text'] .= '<table class="table table-bordered table-striped">';
@@ -1206,23 +1209,23 @@ REGEXP, $string, $matches, \PREG_PATTERN_ORDER);
 
 					$out['text'] .= '<h2>'._L('RA page plugins').'</h2>';
 					$out['text'] .= '<div class="container box"><div id="suboid_table" class="table-responsive">';
-
+						
 			$packs = $this->packagist('all', [
 					  ['type' => 'oiplus-plugin-ra-pages'],
 				  ]);
-
-
+			 
+			
 			    $out['text'] .= '<table>';
 			    $out['text'] .= $this->p_head();
 			    $out['text'] .= '<tbody>';
-			    foreach($packs as $pname){
+			    foreach($packs as $pname){ 
 				  	  $package = $this->package($pname);
 					  extract($package);
 					  $out['text'] .= $this->p_row($name, $repository, $description, $this->p_status($name, $composer), '');
 				}
 			   $out['text'] .= '</tbody>';
 			    $out['text'] .= '</table>';
-
+			
 		 //	if ($show_pages_ra) {
 				if (count($plugins = $pp_ra) > 0) {
 					$out['text'] .= '<table class="table table-bordered table-striped">';
@@ -1241,16 +1244,16 @@ REGEXP, $string, $matches, \PREG_PATTERN_ORDER);
 
 					$out['text'] .= '<h2>'._L('Admin page plugins').'</h2>';
 					$out['text'] .= '<div class="container box"><div id="suboid_table" class="table-responsive">';
-
+			
 			$packs = $this->packagist('all', [
 					  ['type' => 'oiplus-plugin-admin-pages'],
 				  ]);
-
-
+			 
+			
 			    $out['text'] .= '<table>';
 			    $out['text'] .= $this->p_head();
 			    $out['text'] .= '<tbody>';
-			    foreach($packs as $pname){
+			    foreach($packs as $pname){ 
 				  	  $package = $this->package($pname);
 					  extract($package);
 					  $out['text'] .= $this->p_row($name, $repository, $description, $this->p_status($name, $composer), '');
@@ -1278,24 +1281,24 @@ REGEXP, $string, $matches, \PREG_PATTERN_ORDER);
 				$disabled = true ? OIDplus::getObjectTypePluginsDisabled() : array();
 					$out['text'] .= '<h2>'._L('Object types').'</h2>';
 					$out['text'] .= '<div class="container box"><div id="suboid_table" class="table-responsive">';
-
-
+			
+		 
 			      $packs = $this->packagist('all', [
 					  ['type' => 'oiplus-plugin-object-types'],
 				  ]);
-
-
+			 
+			
 			    $out['text'] .= '<table>';
 			    $out['text'] .= $this->p_head();
 			    $out['text'] .= '<tbody>';
-			    foreach($packs as $pname){
+			    foreach($packs as $pname){ 
 				  	  $package = $this->package($pname);
 					  extract($package);
 					  $out['text'] .= $this->p_row($name, $repository, $description, $this->p_status($name, $composer), '');
 				}
 			   $out['text'] .= '</tbody>';
 			    $out['text'] .= '</table>';
-
+			
 				if (count($plugins = array_merge($enabled, $disabled)) > 0) {
 					$out['text'] .= '<table class="table table-bordered table-striped">';
 					$out['text'] .= '<thead>';
@@ -1314,23 +1317,23 @@ REGEXP, $string, $matches, \PREG_PATTERN_ORDER);
 				}
 					$out['text'] .= '</div></div>';
 			 //}
-
-
-
-
+			
+			
+			
+			
 
 					$out['text'] .= '<h2>'._L('Database providers').'</h2>';
 					$out['text'] .= '<div class="container box"><div id="suboid_table" class="table-responsive">';
-
+			
 			$packs = $this->packagist('all', [
 					  ['type' => 'oiplus-plugin-database'],
 				  ]);
-
-
+			 
+			
 			    $out['text'] .= '<table>';
 			    $out['text'] .= $this->p_head();
 			    $out['text'] .= '<tbody>';
-			    foreach($packs as $pname){
+			    foreach($packs as $pname){ 
 				  	  $package = $this->package($pname);
 					  extract($package);
 					  $out['text'] .= $this->p_row($name, $repository, $description, $this->p_status($name, $composer), '');
@@ -1361,19 +1364,19 @@ REGEXP, $string, $matches, \PREG_PATTERN_ORDER);
 			$packs = $this->packagist('all', [
 					  ['type' => 'oiplus-plugin-sql-slang'],
 				  ]);
-
-
+			 
+			
 			    $out['text'] .= '<table>';
 			    $out['text'] .= $this->p_head();
 			    $out['text'] .= '<tbody>';
-			    foreach($packs as $pname){
+			    foreach($packs as $pname){ 
 				  	  $package = $this->package($pname);
 					  extract($package);
 					  $out['text'] .= $this->p_row($name, $repository, $description, $this->p_status($name, $composer), '');
 				}
 			   $out['text'] .= '</tbody>';
-			    $out['text'] .= '</table>';
-
+			    $out['text'] .= '</table>';			
+			
 			 //if ($show_sql_active || $show_sql_inactive) {
 				if (count($plugins = OIDplus::getSqlSlangPlugins()) > 0) {
 					$out['text'] .= '<table class="table table-bordered table-striped">';
@@ -1395,22 +1398,22 @@ REGEXP, $string, $matches, \PREG_PATTERN_ORDER);
 
 					$out['text'] .= '<h2>'._L('RA authentication providers').'</h2>';
 					$out['text'] .= '<div class="container box"><div id="suboid_table" class="table-responsive">';
-
+			
 			$packs = $this->packagist('all', [
 					  ['type' => 'oiplus-plugin-auth'],
 				  ]);
-
-
+			 
+			
 			    $out['text'] .= '<table>';
 			    $out['text'] .= $this->p_head();
 			    $out['text'] .= '<tbody>';
-			    foreach($packs as $pname){
+			    foreach($packs as $pname){ 
 				  	  $package = $this->package($pname);
 					  extract($package);
 					  $out['text'] .= $this->p_row($name, $repository, $description, $this->p_status($name, $composer), '');
 				}
 			   $out['text'] .= '</tbody>';
-			    $out['text'] .= '</table>';
+			    $out['text'] .= '</table>';					
 			 //if ($show_auth) {
 				if (count($plugins = OIDplus::getAuthPlugins()) > 0) {
 					$out['text'] .= '<table class="table table-bordered table-striped">';
@@ -1468,19 +1471,19 @@ REGEXP, $string, $matches, \PREG_PATTERN_ORDER);
 			$packs = $this->packagist('all', [
 					  ['type' => 'oiplus-plugin-logger'],
 				  ]);
-
-
+			 
+			
 			    $out['text'] .= '<table>';
 			    $out['text'] .= $this->p_head();
 			    $out['text'] .= '<tbody>';
-			    foreach($packs as $pname){
+			    foreach($packs as $pname){ 
 				  	  $package = $this->package($pname);
 					  extract($package);
 					  $out['text'] .= $this->p_row($name, $repository, $description, $this->p_status($name, $composer), '');
 				}
 			   $out['text'] .= '</tbody>';
-			    $out['text'] .= '</table>';
-
+			    $out['text'] .= '</table>';					
+			
 		 //	if ($show_logger) {
 				if (count($plugins = OIDplus::getLoggerPlugins()) > 0) {
 					$out['text'] .= '<table class="table table-bordered table-striped">';
@@ -1509,19 +1512,19 @@ REGEXP, $string, $matches, \PREG_PATTERN_ORDER);
 			$packs = $this->packagist('all', [
 					  ['type' => 'oiplus-plugin-language'],
 				  ]);
-
-
+			 
+			
 			    $out['text'] .= '<table>';
 			    $out['text'] .= $this->p_head();
 			    $out['text'] .= '<tbody>';
-			    foreach($packs as $pname){
+			    foreach($packs as $pname){ 
 				  	  $package = $this->package($pname);
 					  extract($package);
 					  $out['text'] .= $this->p_row($name, $repository, $description, $this->p_status($name, $composer), '');
 				}
 			   $out['text'] .= '</tbody>';
-			    $out['text'] .= '</table>';
-
+			    $out['text'] .= '</table>';					
+			
 		 //	if ($show_language) {
 				if (count($plugins = OIDplus::getLanguagePlugins()) > 0) {
 					$out['text'] .= '<table class="table table-bordered table-striped">';
@@ -1544,18 +1547,18 @@ REGEXP, $string, $matches, \PREG_PATTERN_ORDER);
 			$packs = $this->packagist('all', [
 					  ['type' => 'oiplus-plugin-design'],
 				  ]);
-
-
+			 
+			
 			    $out['text'] .= '<table>';
 			    $out['text'] .= $this->p_head();
 			    $out['text'] .= '<tbody>';
-			    foreach($packs as $pname){
+			    foreach($packs as $pname){ 
 				  	  $package = $this->package($pname);
 					  extract($package);
 					  $out['text'] .= $this->p_row($name, $repository, $description, $this->p_status($name, $composer), '');
 				}
 			   $out['text'] .= '</tbody>';
-			    $out['text'] .= '</table>';
+			    $out['text'] .= '</table>';				
 			 //if ($show_design_active || $show_design_inactive) {
 				if (count($plugins = OIDplus::getDesignPlugins()) > 0) {
 					$out['text'] .= '<table class="table table-bordered table-striped">';
@@ -1581,18 +1584,18 @@ REGEXP, $string, $matches, \PREG_PATTERN_ORDER);
 			$packs = $this->packagist('all', [
 					  ['type' => 'oiplus-plugin-captcha'],
 				  ]);
-
-
+			 
+			
 			    $out['text'] .= '<table>';
 			    $out['text'] .= $this->p_head();
 			    $out['text'] .= '<tbody>';
-			    foreach($packs as $pname){
+			    foreach($packs as $pname){ 
 				  	  $package = $this->package($pname);
 					  extract($package);
 					  $out['text'] .= $this->p_row($name, $repository, $description, $this->p_status($name, $composer), '');
 				}
 			   $out['text'] .= '</tbody>';
-			    $out['text'] .= '</table>';
+			    $out['text'] .= '</table>';				
 				if (count($plugins = OIDplus::getCaptchaPlugins()) > 0) {
 					$out['text'] .= '<table class="table table-bordered table-striped">';
 					$out['text'] .= '<thead>';
@@ -1610,31 +1613,31 @@ REGEXP, $string, $matches, \PREG_PATTERN_ORDER);
 				}
 					$out['text'] .= '</div></div>';
 			 //}
-
-
+		 			
+			
 		}//gui and is admin
 	   return $out;
-   }
-
-
-
-
+   }				   
+				   
+				   
+				   
+		   
 	public function modifyContent($id, &$title, &$icon, &$text): void {
-
-		if(!static::is_cli() ){
-			$this->ob_privacy();
+				
+		if(!static::is_cli() ){ 
+			$this->ob_privacy();	
 		}
 		$text = $this->privacy_protect_mails($text);
-
+		
 		$content = '';
 		$CRUD = '';
 
-		$weidObj = false;
+		$weidObj = false;	 
 
 		$id = explode('$', $id, 2)[0];
 		$obj = OIDplusObject::parse($id);
 		$textCircuit = '';
-
+		
 	//	$textCircuit.=print_r( [$id, $title], true);
 	//	$content.=print_r( [$id, $icon], true);
 		if($obj){
@@ -1649,57 +1652,57 @@ REGEXP, $string, $matches, \PREG_PATTERN_ORDER);
 							 .' may NOT be accessable via the REAL-IP in the internet as you might expect';
 					  break;
 				  default:
-
+					    
 					  break;
 			  }
 		}
-
+		
 		$CRUD = $textCircuit . $CRUD;
 
 
 		$content = (false === strpos($content, '%%CRUD%%'))
-			? $content . $CRUD
+			? $content . $CRUD 
 			: str_replace('%%CRUD%%', \PHP_EOL . $CRUD . \PHP_EOL . '%%CRUD%%', $content);
 
 		$handled = false;
 		//  parent::gui($id, $content2, $handled);
-		$content = $this->privacy_protect_mails($content);
+		$content = $this->privacy_protect_mails($content);		
 		$text = $content.$text;
 
 
 		$text = str_replace($_SERVER['DOCUMENT_ROOT'], '***', $text);
 
-
+		
 		$this->modifyContent_schema( $id, $title, $icon, $text);
 		$this->modifyContent_attributes( $id, $title, $icon, $text);
 		$this->modifyContent_pki( $id, $title, $icon, $text);
 		$this->modifyContent_log( $id, $title, $icon, $text);
 		$text = $this->privacy_protect_mails($text);
 	}
-
+	
 
    public function gui(string $id, array &$out, bool &$handled): void {
-
-	   if(!static::is_cli() ){
-			$this->ob_privacy();
+	   	
+	   if(!static::is_cli() ){ 
+			$this->ob_privacy();	
 		}
-
+	   
 	   	$out['text'] = $this->privacy_protect_mails($out['text']);
-		$parts = explode('$',$id,2);
-
+		$parts = explode('$',$id,2);	 
+	   
 		$id = $parts[0];
 		$ra_email = $parts[1] ?? null/*no filter*/;
 
-
-	   if(isset(self::PAGES[$id]) && is_callable([$this, self::PAGES[$id]])){
+		   
+	   if(isset(self::PAGES[$id]) && is_callable([$this, self::PAGES[$id]])){ 
 		   $handled = true;
-          $out = \call_user_func_array([$this, self::PAGES[$id]], [$id, $out]);
+          $out = \call_user_func_array([$this, self::PAGES[$id]], [$id, $out]);   
 	   }
-
+ 
 	   	$out['text'] = $this->privacy_protect_mails($out['text']);
-	}
-
-
+	}	
+				   
+				   
    public function gui_PAGE_ID_WEBFAT(string $id, array $out) {
 		if ($id == self::PAGE_ID_WEBFAT && OIDplus::authUtils()->isAdminLoggedIn()) {
           //  header('Location: '.$this->getWebfatSetupLink());
@@ -1708,17 +1711,17 @@ REGEXP, $string, $matches, \PREG_PATTERN_ORDER);
 				   .'<a href="'.$this->getWebfatSetupLink().'">'.$this->getWebfatSetupLink().'</a>';
 		}
 	   return $out;
-   }
-
+   }   
+	
 	public function gui_PAGE_ID_BRIDGE(string $id, array $out) {
 		if ($id == self::PAGE_ID_BRIDGE && OIDplus::authUtils()->isAdminLoggedIn()) {
-
+		
 			$out['title'] = _L('IO4 Bridge');
 			//IO4_ALLOW_AUTOLOAD_FROM_REMOTE
 			$out['text'] .= <<<HTMLCODE
 			<legend>Remote autoloading</legend>
-			This is a functiuonallity for developer and admin purposes only when in setup/update or install mode.
-			If everything is up and running fine you should disable it. If a class is missing when disabled please contact the
+			This is a functiuonallity for developer and admin purposes only when in setup/update or install mode. 
+			If everything is up and running fine you should disable it. If a class is missing when disabled please contact the 
 			developer of the plugin or core.<br />
 			To DISABLE autoloading classes from remote servers of Github, Webfan or custom, please set the OIDplus config variable
 			<br />
@@ -1727,75 +1730,75 @@ REGEXP, $string, $matches, \PREG_PATTERN_ORDER);
 			HTMLCODE;
 		}elseif($id == self::PAGE_ID_BRIDGE){
 			$handled = true;
-
+			
 		}
-
+		
 	   return $out;
    }
+				   
 
 
 
+				   
 
 
+		   
+				   
 
 
-
-
-
-
-
-
-
+ 
+	
+		
    	protected function modifyContent_log(string $id, string &$title, string &$icon, string &$text) {
 
 	}
-
-
+				   
+		
    	protected function modifyContent_pki(string $id, string &$title, string &$icon, string &$text) {
 
 	}
-
+		
    	protected function modifyContent_attributes(string $id, string &$title, string &$icon, string &$text) {
 
 	}
-
+				   
 
 	public function whoisObjectAttributes_log(string $id, array &$out) {
 		$xmlns = 'webfat-for-oidplus';
 		$xmlschema = 'urn:oid:1.3.6.1.4.1.37553.8.1.8.8.53354196964.24196.1714020422';
-		$xmlschemauri = OIDplus::webpath(__DIR__.'/io4.log.xsd',OIDplus::PATH_ABSOLUTE);
-
-
+		$xmlschemauri = OIDplus::webpath(__DIR__.'/io4.log.xsd',OIDplus::PATH_ABSOLUTE);		
+		
+			
 		$handleShown = false;
 		$canonicalShown = false;
 
 		$out1 = array();
 
+						   
 
-
-
-	      $out = array_merge($out, $out1);
-	}
-
+			 
+	      $out = array_merge($out, $out1);  		
+	}	
+	
 	public function whoisObjectAttributes_pki(string $id, array &$out) {
 		$xmlns = 'webfat-for-oidplus';
 		$xmlschema = 'urn:oid:1.3.6.1.4.1.37553.8.1.8.8.53354196964.24196.1714020422';
-		$xmlschemauri = OIDplus::webpath(__DIR__.'/io4.pki.xsd',OIDplus::PATH_ABSOLUTE);
-
-
+		$xmlschemauri = OIDplus::webpath(__DIR__.'/io4.pki.xsd',OIDplus::PATH_ABSOLUTE);		
+		
+			
 		$handleShown = false;
 		$canonicalShown = false;
 
 		$out1 = array();
 		$out2 = array();
+						   
 
-
-
-	      $out = array_merge($out, $out1);
-		  $out = array_merge($out, $out2);
-	}
-
-
+			 
+	      $out = array_merge($out, $out1);  
+		  $out = array_merge($out, $out2); 		
+	}					   
+	
+				   
 	protected function schema_write_cache($out, string $cacheFile){
 		 file_put_contents($cacheFile, false===$out ? json_encode(false) : json_encode($out));
 	}
@@ -1824,23 +1827,23 @@ REGEXP, $string, $matches, \PREG_PATTERN_ORDER);
 			}
 		}
 		return false;
-	}
-
+	}				
+		
    	protected function modifyContent_schema(string $id, string &$title, string &$icon, string &$text) {
             //$tmp = $this->schema_read_cache($this->schema_cache_file($id), $this->schemaCacheExpires);
 			//if ($tmp) return $tmp;
-	}
-
-
+	}				   			   
+				   
+		
    	protected function schema_get(string $id ) {
            $cacheFile =$this->schema_cache_file($id);
 		   $apiUrltemplateGetSchema = OIDplus::baseConfig()->getValue('API_UR_TEMPLATE_SCHEMA_GET',
 																	   'https://api.webfan.de/registry/api/meta/schema/%1s'
 																	 );
-
+ 
 		 $url = sprintf($apiUrltemplateGetSchema, urlencode(WeidOidConverter::oid2weid($id)));
-
-
+			 
+			 
 		$httpResult = $this->getWebfat(true,false)->getRemoteAutoloader()->transport($url, 'GET');
 		$schema = false;
 		if($httpResult->status == 200){
@@ -1850,139 +1853,139 @@ REGEXP, $string, $matches, \PREG_PATTERN_ORDER);
 		}else{
 			$this->schema_write_cache(false,  $cacheFile);
 		}
-
-
-
-	}
-
-
-
-
+		
+	 
+		
+	}				   			   
+				
+				   
+				   
+				   
 	public function whoisObjectAttributes_attributes(string $id, array &$out) {
 		$xmlns = 'webfat-for-oidplus';
 		$xmlschema = 'urn:oid:1.3.6.1.4.1.37553.8.1.8.8.53354196964.24196.1714020422';
-		$xmlschemauri = OIDplus::webpath(__DIR__.'/io4.attributes.xsd',OIDplus::PATH_ABSOLUTE);
-
-
+		$xmlschemauri = OIDplus::webpath(__DIR__.'/io4.attributes.xsd',OIDplus::PATH_ABSOLUTE);		
+		
+			
 		$handleShown = false;
 		$canonicalShown = false;
 
-		$out1 = array();
-
-
-		$id_schema = $id;
+		$out1 = array(); 
+						   
+	  		
+		$id_schema = $id;				
 		 $obj = OIDplusObject::findFitting($id_schema);
 		 if($obj){
-			// $id = $obj->nodeId();
-			 $id_schema = $obj->nodeId(false);
+			// $id = $obj->nodeId(); 
+			 $id_schema = $obj->nodeId(false); 
 		 }
 		 //	if(isset($_GET['test']))die(OIDplusPagePublicAttachments::getUploadDir($obj->nodeId(true)));
+		
+		
 
-
-
-
-	      $out = array_merge($out, $out1);
-	}
-
-
-
-
+			 
+	      $out = array_merge($out, $out1);  	
+	}				   
+	   
+				   
+				   
+				   
 	public function whoisObjectAttributes(string $id, array &$out): void {
 		if(true !== OIDplus::baseConfig()->getValue('ENABLE_IO4_ATTRIBUTES', true ) ){
-		  return;
-		}
+		  return;	
+		} 
 		$xmlns = 'webfat-for-oidplus';
 		$xmlschema = 'urn:oid:1.3.6.1.4.1.37553.8.1.8.8.53354196964.24196.1714020422';
-		$xmlschemauri = OIDplus::webpath(__DIR__.'/io4.xsd',OIDplus::PATH_ABSOLUTE);
-
-
+		$xmlschemauri = OIDplus::webpath(__DIR__.'/io4.xsd',OIDplus::PATH_ABSOLUTE);		
+		
+			
 		$handleShown = false;
 		$canonicalShown = false;
 
-		$out1 = array();
-		$id_schema = $id;
+		$out1 = array(); 
+		$id_schema = $id;				
 		 $obj = OIDplusObject::findFitting($id_schema);
 		 if($obj){
-			// $id = $obj->nodeId();
-			 $id_schema = $obj->nodeId(false);
+			// $id = $obj->nodeId(); 
+			 $id_schema = $obj->nodeId(false); 
 		 }
-
-
+			
+		
 		//if(@isset($_GET['test']))die($id_schema);
-
-
+		
+		
 	             $cacheFile =$this->schema_cache_file($id_schema);
-
+		
 		      if(!file_exists($cacheFile)){
 				  $this->schema_get($id_schema);
 			  }
-
-
+		
+		
 		         $schema = $this->schema_read_cache($cacheFile, $this->schemaCacheExpires);
-
+				          
 		        if ($schema){
-
+					  				
 				   $out1[] = [
 					  'xmlns' => $xmlns,
 					  'xmlschema' => $xmlschema,
 					   'xmlschemauri' => $xmlschemauri,
 					  'name' => 'json-schema',
-					  'value' =>json_encode($schema),// $schema,
+					  'value' =>json_encode($schema),// $schema, 
 			    	];
 				  }
+		
+	
 
-
-
-
-	      $out = array_merge($out, $out1);
-
+			 
+	      $out = array_merge($out, $out1);   
+		
 		 	$this->whoisObjectAttributes_attributes( $id, $out);
 		    $this->whoisObjectAttributes_pki( $id, $out);
 		    $this->whoisObjectAttributes_log( $id, $out);
 	}
 
-
+	
 	public function whoisRaAttributes(string $email = null, array &$out): void {
-
+		
 		if(true !== OIDplus::baseConfig()->getValue('ENABLE_IO4_ATTRIBUTES', true ) ){
-		  return;
-		}
-
-
+		  return;	
+		}	
+		
+		
             //reference-id
 		$xmlns = 'webfat-for-oidplus';
 		$xmlschema = 'urn:oid:1.3.6.1.4.1.37553.8.1.8.8.53354196964.24196.1714020422';
-		$xmlschemauri = OIDplus::webpath(__DIR__.'/io4.xsd',OIDplus::PATH_ABSOLUTE);
-
-
+		$xmlschemauri = OIDplus::webpath(__DIR__.'/io4.xsd',OIDplus::PATH_ABSOLUTE);		
+		
+			
 		$handleShown = false;
 		$canonicalShown = false;
 
 		$out1 = array();
 		$out2 = array();
-
-
+		
+		
 		$mailIn = null === $email ? '/@IN' : $email;
 		$mailOut = null === $email ? '/@OUT' : $email;
-
-
-	      $out = array_merge($out, $out1);
-		  $out = array_merge($out, $out2);
+		
+			
+	      $out = array_merge($out, $out1);  
+		  $out = array_merge($out, $out2); 		
 	}
+			   
+				   
 
 
-
-
-
+	
 	public function restApiInfo(string $kind='html'): string {
 		if ($kind === 'html') {
 			$struct = [
-
-
+				
+		
 				_L('@ (ALL METHODS) Installer') => [
-					'<b>Remote-Installer API Server Endpoint</b> '.OIDplus::webpath(null,OIDplus::PATH_ABSOLUTE_CANONICAL).OIDplus::baseConfig()->getValue('FRDLWEB_INSTALLER_REMOTE_SERVER_RELATIVE_BASE_URI',
+					'<b>Remote-Installer API Server Endpoint</b> '.OIDplus::webpath(null,OIDplus::PATH_ABSOLUTE_CANONICAL).OIDplus::baseConfig()->getValue('FRDLWEB_INSTALLER_REMOTE_SERVER_RELATIVE_BASE_URI', 
 																			'api/v1/io4/remote-installer/'
-											.OIDplus::baseConfig()->getValue('TENANT_OBJECT_ID_OID',
+											.OIDplus::baseConfig()->getValue('TENANT_OBJECT_ID_OID', 
 											OIDplus::baseConfig()->getValue('TENANT_REQUESTED_HOST', 'webfan/website' ) ) )
 ,
 					_L('Input parameters') => [
@@ -1992,11 +1995,11 @@ REGEXP, $string, $matches, \PREG_PATTERN_ORDER);
 						'mixed...'
 					]
 				],
-
+						
 						_L('@ (ALL METHODS) Container') => [
-					'<b>Remote-Container API Server Endpoint</b> '.OIDplus::webpath(null,OIDplus::PATH_ABSOLUTE_CANONICAL). OIDplus::baseConfig()->getValue('FRDLWEB_CONTAINER_REMOTE_SERVER_RELATIVE_BASE_URI',
+					'<b>Remote-Container API Server Endpoint</b> '.OIDplus::webpath(null,OIDplus::PATH_ABSOLUTE_CANONICAL). OIDplus::baseConfig()->getValue('FRDLWEB_CONTAINER_REMOTE_SERVER_RELATIVE_BASE_URI', 
 																			'api/v1/io4/remote-container/'
-											.OIDplus::baseConfig()->getValue('TENANT_OBJECT_ID_OID',
+											.OIDplus::baseConfig()->getValue('TENANT_OBJECT_ID_OID', 
 											OIDplus::baseConfig()->getValue('TENANT_REQUESTED_HOST', 'webfan/website' ) ) )
 							,
 					_L('Input parameters') => [
@@ -2006,10 +2009,10 @@ REGEXP, $string, $matches, \PREG_PATTERN_ORDER);
 						'mixed...'
 					]
 				],
-
-
-
-
+						
+						
+				
+				
 				_L('@ Get') => [
 					'<b>GET</b> '.OIDplus::webpath(null,OIDplus::PATH_ABSOLUTE_CANONICAL).'rest/v1/io4/@/<abbr title="'._L('e.g. %1', '@/oid:2.999').'">[id]</abbr>',
 					_L('Input parameters') => [
@@ -2019,8 +2022,8 @@ REGEXP, $string, $matches, \PREG_PATTERN_ORDER);
 						'mixed...'
 					]
 				],
-
-
+				
+	
 				_L('@ Set') => [
 					'<b>POST</b> '.OIDplus::webpath(null,OIDplus::PATH_ABSOLUTE_CANONICAL).'rest/v1/io4/@/<abbr title="'._L('e.g. %1', 'oid:2.999').'">[id]</abbr>',
 					_L('Input parameters') => [
@@ -2029,8 +2032,8 @@ REGEXP, $string, $matches, \PREG_PATTERN_ORDER);
 					_L('Output parameters') => [
 						'mixed...'
 					]
-				],
-
+				],			
+				
 				_L('@ Remove') => [
 					'<b>DELETE</b> '.OIDplus::webpath(null,OIDplus::PATH_ABSOLUTE_CANONICAL).'rest/v1/io4/@/<abbr title="'._L('e.g. %1', 'oid:2.999').'">[id]</abbr>',
 					_L('Input parameters') => [
@@ -2039,9 +2042,9 @@ REGEXP, $string, $matches, \PREG_PATTERN_ORDER);
 					_L('Output parameters') => [
 						'mixed...'
 					]
-				],
-
-
+				],	
+				
+	
 				_L('@ Update') => [
 					'<b>PUT</b> '.OIDplus::webpath(null,OIDplus::PATH_ABSOLUTE_CANONICAL).'rest/v1/io4/@/<abbr title="'._L('e.g. %1', 'oid:2.999').'">[id]</abbr>',
 					_L('Input parameters') => [
@@ -2050,9 +2053,9 @@ REGEXP, $string, $matches, \PREG_PATTERN_ORDER);
 					_L('Output parameters') => [
 						'mixed...'
 					]
-				],
-
-
+				],	
+							
+				
 				_L('Receive') => [
 					'<b>GET</b> '.OIDplus::webpath(null,OIDplus::PATH_ABSOLUTE_CANONICAL).'rest/v1/io4/<abbr title="'._L('e.g. %1', 'oid:2.999').'">[id]</abbr>',
 					_L('Input parameters') => [
@@ -2104,22 +2107,22 @@ REGEXP, $string, $matches, \PREG_PATTERN_ORDER);
 			throw new OIDplusException(_L('Invalid REST API information format'), null, 500);
 		}
 	}
-
-
-
+	
+	
+	
 
 
 	public function restApiCall(string $requestMethod, string $endpoint, array $json_in)/*: array|false*/ {
-
+		 
 		if (str_starts_with($endpoint, 'io4/')) {
 			$id = substr($endpoint, strlen('io4/'));
 			$obj = OIDplusObject::findFitting($id);
-
+				
 			if (!$obj) {
 				$obj = OIDplusObject::parse($id);
 			}
 			/*	*/
-
+				
 	    	if (!$obj) {
               http_response_code(404);
            //   throw new OIDplusException(_L('REST endpoint not found'), null, 404);
@@ -2134,12 +2137,12 @@ REGEXP, $string, $matches, \PREG_PATTERN_ORDER);
 			    ]);
 			    die(); // return true;
 			}
-
+			
 			if('GET' === $requestMethod){
 				 if (!$obj->userHasReadRights() && $obj->isConfidential()){
     		        throw new OIDplusException('Insufficient authorization to read information about this object.', null, 401);
-		         }
-
+		         }	
+		         
 	              http_response_code(200);
            //   throw new OIDplusException(_L('REST endpoint not found'), null, 404);
            		OIDplus::invoke_shutdown();
@@ -2152,17 +2155,17 @@ REGEXP, $string, $matches, \PREG_PATTERN_ORDER);
 			      'object'=>(array)$obj,
 			      'alloc'=>[],
 			    ]);
-			    die(); // return true;
-
-
+			    die(); // return true;	         
+		         
+		         
 			}elseif('DELETE' === $requestMethod){
 				if (!$obj->userHasParentalWriteRights()){
 		         throw new OIDplusException(_L('Authentication error. Please log in as the superior RA to delete this OID.'),
 		           null, 401);
 				}
-
+	             
 	              http_response_code(200);
-
+            
            		OIDplus::invoke_shutdown();
 		    	@header('Content-Type:application/json; charset=utf-8');
 			    echo json_encode([
@@ -2173,16 +2176,16 @@ REGEXP, $string, $matches, \PREG_PATTERN_ORDER);
 			      'object'=>(array)$obj,
 			      'alloc'=>[],
 			    ]);
-			    die(); // return true;
+			    die(); // return true;	     
 			}else{
 				if (!$obj->userHasParentalWriteRights()){
 		         throw new OIDplusException(_L('Authentication error. Please log in as the superior RA to maintain this OID.'),
 		           null, 401);
 				}
-
-
+				
+					          
 			    http_response_code(200);
-
+            
            		OIDplus::invoke_shutdown();
 		    	@header('Content-Type:application/json; charset=utf-8');
 			    echo json_encode([
@@ -2193,14 +2196,14 @@ REGEXP, $string, $matches, \PREG_PATTERN_ORDER);
 			      'object'=>(array)$obj,
 			      'alloc'=>[],
 			    ]);
-			    die(); // return true;
+			    die(); // return true;				
 			}
 
-
+    	  
 		}
 	}
-
-
+					   
+ 
 		/**
 	 * @param array $out
 	 * @return void
@@ -2242,12 +2245,12 @@ REGEXP, $string, $matches, \PREG_PATTERN_ORDER);
 		$out['text'] .= '	</tr>';
 	}
 
+				   
+				   
+ 
 
-
-
-
-
-
+	
+	
 		public static function getCommonHeadElems(string $title): array {
 		// Get theme color (color of title bar)
 		$design_plugin = OIDplus::getActiveDesignPlugin();
@@ -2273,26 +2276,26 @@ REGEXP, $string, $matches, \PREG_PATTERN_ORDER);
 		/*
 			$head_elems[] = '<link rel="canonical" href="'.htmlentities(OIDplus::canonicalURL().OIDplus::webpath(null, OIDplus::PATH_ABSOLUTE_CANONICAL)).'">';
 			*/
-						$head_elems[] = '<link rel="canonical" href="'.rtrim(OIDplus::webpath(null,
+						$head_elems[] = '<link rel="canonical" href="'.rtrim(OIDplus::webpath(null, 
                                OIDplus::PATH_ABSOLUTE_CANONICAL),'/ ').$_SERVER['REQUEST_URI']
 							.'">';
 		}
 
 		//$files[] = 'var csrf_token = '.js_escape($_COOKIE['csrf_token'] ?? '').';';
 		//$files[] = 'var samesite_policy = '.js_escape(OIDplus::baseConfig()->getValue('COOKIE_SAMESITE_POLICY','Strict')).';';
-		$head_elems[] = '<script>var csrf_token = '.js_escape($_COOKIE['csrf_token'] ?? '').';</script>';
-		$head_elems[] = '<script>var csrf_token_weak = '.js_escape($_COOKIE['csrf_token_weak'] ?? '').';</script>';
-		$head_elems[] =
-			'<script>var samesite_policy = '.js_escape(OIDplus::baseConfig()->getValue('COOKIE_SAMESITE_POLICY','Strict')).';</script>';
+		$head_elems[] = '<script>var csrf_token = '.js_escape($_COOKIE['csrf_token'] ?? '').';</script>';		
+		$head_elems[] = '<script>var csrf_token_weak = '.js_escape($_COOKIE['csrf_token_weak'] ?? '').';</script>';		
+		$head_elems[] = 
+			'<script>var samesite_policy = '.js_escape(OIDplus::baseConfig()->getValue('COOKIE_SAMESITE_POLICY','Strict')).';</script>';		
 		return $head_elems;
-	}
-
-
+	}	
+	
+	
 	public static function showMainPage(string $page_title_1, string $page_title_2, string $static_icon, string $static_content, array $extra_head_tags=array(), string $static_node_id=''): string {
-
-
+		
+		
 		$_REQUEST['goto'] = $static_node_id;
-
+		
    if (!isset($_COOKIE['csrf_token'])) {
 	// This is the main CSRF token used for AJAX.
 	$token = OIDplus::authUtils()->genCSRFToken();
@@ -2306,8 +2309,8 @@ REGEXP, $string, $matches, \PREG_PATTERN_ORDER);
 	$token = OIDplus::authUtils()->genCSRFToken();
 	OIDplus::cookieUtils()->setcookie('csrf_token_weak', $token, 0, false, 'Lax');
 	unset($token);
-  }
-
+  }	   		
+		
 	//	$head_elems = (new OIDplusGui())->getCommonHeadElems($page_title_1);
 		$head_elems = static::getCommonHeadElems($page_title_1);
 		$head_elems = array_merge($extra_head_tags, $head_elems);
@@ -2365,7 +2368,7 @@ REGEXP, $string, $matches, \PREG_PATTERN_ORDER);
 		$out .= '</div>';
 
 		$out .= '</div>';
-
+ 
 		$out .= OIDplus::gui()->getLanguageBox($static_node_id, true);
 
 		$out .= '<div id="gotobox">';
@@ -2373,7 +2376,7 @@ REGEXP, $string, $matches, \PREG_PATTERN_ORDER);
 		$out .= '<input type="button" value="'._L('Go').'" onclick="gotoButtonClicked()" id="gotobutton">';
 		$out .= '</div>';
 
-
+	
 		$out .= '<div id="oidtree" class="borderbox">';
 		//$out .= '<noscript>';
 		//$out .= '<p><b>'._L('Please enable JavaScript to use all features').'</b></p>';
@@ -2381,8 +2384,8 @@ REGEXP, $string, $matches, \PREG_PATTERN_ORDER);
 		$out .= OIDplus::menuUtils()->nonjs_menu();
 		$out .= '</div>';
 /*	*/
-
-
+		
+		
 		$out .= '</div>';
 
 		$out .= "\n</body>\n";
@@ -2398,8 +2401,8 @@ REGEXP, $string, $matches, \PREG_PATTERN_ORDER);
 		return $out;
 	}
 
-
-
+				   
+				   
  	/**
 	 * @param array $json
 	 * @param string|null $ra_email
@@ -2409,8 +2412,8 @@ REGEXP, $string, $matches, \PREG_PATTERN_ORDER);
 	 * @throws OIDplusException
 	 */
 	public function tree(array &$json, string $ra_email=null, bool $nonjs=false, string $req_goto=''): bool {
-
-
+	
+		
 		if (file_exists(__DIR__.'/img/main_icon16.png')) {
 			$tree_icon = OIDplus::webpath(__DIR__,OIDplus::PATH_RELATIVE).'img/main_icon16.png';
 		} else {
@@ -2421,18 +2424,18 @@ REGEXP, $string, $matches, \PREG_PATTERN_ORDER);
 		 	'id' => 'oidplus:home',
 			'icon' => $tree_icon,
 			 'a_attr'=>[
-				 'href'=>OIDplus::webpath(__DIR__,OIDplus::PATH_RELATIVE),
+				 'href'=>OIDplus::webpath(__DIR__,OIDplus::PATH_RELATIVE),				 
 			 ],
-			'text' => _L('Home'),
-		);
-
+			'text' => _L('Home'), 
+		);		
+		
 
 	  	$json[] = array(
 			'id' => 'oidplus:system',
 			//'icon' => $tree_icon,
-			'text' => _L('Registry'),
-		);
-
+			'text' => _L('Registry'), 
+		);	
+		
 		*/
 		if (!OIDplus::authUtils()->isAdminLoggedIn()) return false;
 
@@ -2441,10 +2444,10 @@ REGEXP, $string, $matches, \PREG_PATTERN_ORDER);
 		$json[] = array(
 			'id' => self::PAGE_ID_COMPOSER,
 			//'icon' => $tree_icon,
-			'text' => _L('Composer Plugins'),
+			'text' => _L('Composer Plugins'), 
 		);
-
-
+		
+		
 		$json[] = array(
 			'id' => self::PAGE_ID_WEBFAT,
 			//'icon' => $tree_icon,
@@ -2455,16 +2458,15 @@ REGEXP, $string, $matches, \PREG_PATTERN_ORDER);
 		$json[] = array(
 			'id' => self::PAGE_ID_BRIDGE,
 			//'icon' => $tree_icon,
-			'text' => _L('Webfan IO4 Bridge'),
+			'text' => _L('Webfan IO4 Bridge'), 
 		);
 
 		return true;
 	}
-	 public function publicSitemap(&$out) {
-		//$out[] = OIDplus::getSystemUrl().'?goto='.urlencode('com.frdlweb.freeweid');
-	//	 $out[] = OIDplus::getSystemUrl().'?goto='.urlencode('oidplus:system');
+	 public function publicSitemap(&$out) { 
+		//$out[] = OIDplus::getSystemUrl().'?goto='.urlencode('com.frdlweb.freeweid'); 
+	//	 $out[] = OIDplus::getSystemUrl().'?goto='.urlencode('oidplus:system'); 
 	 }
 
- }//class
+ }//class	
 }//plugin ns
-
