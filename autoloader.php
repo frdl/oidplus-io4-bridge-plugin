@@ -20,12 +20,17 @@ $StubRunner = (new \IO4\Webfat)->getWebfat($webfatFile,
                                            false //runAsIndex / run as "main app"
  );
 */
-
+ 
+//$dir = '@global';
+//$dir = __DIR__.\DIRECTORY_SEPARATOR.'.frdl';
+//putenv('IO4_WORKSPACE_SCOPE="'.$dir.'"'); 
+//$_ENV['IO4_WORKSPACE_SCOPE'] = $dir;
+	
   function _installClass($class){
 	  $plugin_root = __DIR__;
 	  $p = explode('\\', $class);
 	  $_f = implode(\DIRECTORY_SEPARATOR, $p);
-	 $classFile = "{$plugin_root}/classes/{$_f}.php";
+	 $classFile = "{$plugin_root}/.classes/{$_f}.php";
 
    if (!file_exists($classFile) || filemtime($classFile)<30*24*60*60) {
 	// check if composer dependencies are distributed with the plugin
@@ -63,8 +68,9 @@ $StubRunner = (new \IO4\Webfat)->getWebfat($webfatFile,
      require_once  $traitFile;
  }
 
+_installClass(\IO4\CheckInstallStatusTrait::class); 
 _installClass(\IO4\Webfat::class); 
 
 			$getter = new ( \IO4\Webfat::getWebfatTraitSingletonClass() );
-			 $getter->setStubDownloadUrl(\Frdlweb\OIDplus\OIDplusPagePublicIO4::WebfatDownloadUrl);
+			 $getter->setStubDownloadUrl(\Frdlweb\OIDplus\Plugins\AdminPages\IO4\OIDplusPagePublicIO4::WebfatDownloadUrl);
 
