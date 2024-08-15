@@ -614,13 +614,18 @@ REGEXP, $string, $matches, \PREG_PATTERN_ORDER);
 	public function selfToPackage(){
 		$zipfile =OIDplus::localpath().\DIRECTORY_SEPARATOR.'frdl-plugins.zip';
 		
+	
+		
 	     if(!OIDplus::baseConfig()->getValue('IO4_BUNDLE_SELF', 
 										isset($_SERVER['SERVER_NAME']) && 'registry.frdl.de' === $_SERVER['SERVER_NAME']) 
 		&& !file_exists($zipfile)){
-				$this->archiveDownloadTo( OIDplus::localpath(''),
-									 'https://registry.frdl.de/frdl-plugins.zip' ,
-										'frdl-plugins.zip',
-										false);			 
+			  
+				$this->archiveDownloadTo( OIDplus::localpath(null),
+									 'https://registry.frdl.de/frdl-plugins.zip'  ,
+									 OIDplus::localpath(null).'/frdl-plugins.zip',
+										false
+									);			
+			 
 		 }
 		
 		
