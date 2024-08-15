@@ -178,6 +178,7 @@ class OIDplusPagePublicIO4 extends OIDplusPagePluginAdmin //OIDplusPagePluginPub
 	protected $packagistClient = null;
 	protected $composerUI = null;
 
+	protected static $autoloaderRegistered = false;
 	/**
 	 * @var int
 	 */
@@ -558,6 +559,21 @@ REGEXP, $string, $matches, \PREG_PATTERN_ORDER);
 	public function handleFallbackRoutes($REQUEST_URI, $request, $rel_url_original, $rel_url, $requestMethod){
 		$html = '';
 		
+		/*	
+		    	if ($obj = OIDplusObject::findFitting('uri:'.$request)) {
+					//print_r($obj);
+					ob_start();
+					$page  = frdl_ini_dot_parse($obj->getDescription(), true);
+					$data = $page['data']; 
+					$html = $page['content']; 
+					$html = \do_shortcode($html );
+					ob_end_clean();
+					 print_r($html);
+					 print_r($data);
+			 	//  die($html);
+				}
+	*/
+		
 	 if('/' === substr($request, -1)
 	   && $request === OIDplus::webpath(null, OIDplus::PATH_RELATIVE_TO_ROOT)
 	   && (0===count($_GET)
@@ -565,17 +581,17 @@ REGEXP, $string, $matches, \PREG_PATTERN_ORDER);
 	   ){	
 	  // var_dump($REQUEST_URI, $request, $rel_url_original, $rel_url, $requestMethod);
 	 //	die(basename(__FILE__).__LINE__);
-		  ob_end_clean();
-		 ignore_user_abort(true);
-         header("Refresh:5; url=?goto=oidplus:system");
-         header('Connection: close') ;
+	//		  ob_end_clean();
+		  	 ignore_user_abort(true);
+        	  header("Refresh:5; url=?goto=oidplus:system");
+        	  header('Connection: close') ;
 
 		 $html.= '<h1>@ToDo: Startseite in Arbeit...</h1><p class="btn-warning" style="color:red;background:url(https://cdn.startdir.de/ajax-
 		 loader_2.gif) no-repeat;">We are working on a new System feature</p><p>Page will reload soon, please wait...!<br />Neue Seite bald verfügbar!</p><img src="https://cdn.startdir.de/ajax-loader_2.gif" style="border:0px;" />';
 
 		// flush();
-		 die($html);		
-		//return $html;
+		  die($html);		
+//		return $html;
 	  }
 		
 	 /*	*/
@@ -592,9 +608,197 @@ REGEXP, $string, $matches, \PREG_PATTERN_ORDER);
 		$headers = \get_headers($url);   
 		return intval(substr($headers[0], 9, 3));
 	}
+				
+				   
+				   
+	public function selfToPackage(){
+		$zipfile =OIDplus::localpath().\DIRECTORY_SEPARATOR.'frdl-plugins.zip';
+		
+	     if(!OIDplus::baseConfig()->getValue('IO4_BUNDLE_SELF', 
+										isset($_SERVER['SERVER_NAME']) && 'registry.frdl.de' === $_SERVER['SERVER_NAME']) 
+		&& !file_exists($zipfile)){
+				$this->archiveDownloadTo( OIDplus::localpath(''),
+									 'https://registry.frdl.de/frdl-plugins.zip' ,
+										'frdl-plugins.zip',
+										false);			 
+		 }
+		
+		
+		
+     if(OIDplus::baseConfig()->getValue('IO4_BUNDLE_SELF', 
+										isset($_SERVER['SERVER_NAME']) && 'registry.frdl.de' === $_SERVER['SERVER_NAME']) 
+		&& !file_exists($zipfile )){
+		 /*
+    	//$this->getWebfat(true,false)->getRemoteAutoloader()->register( true );
+	    //$Stunrunner =require __DIR__.'/webfan.setup.php';
+	   $Stunrunner = $this->getWebfat(true,false);
+      $container = $Stunrunner->getAsContainer(null); 
+      $Stunrunner->init();
+      $Stunrunner->autoloading();
+    //$Stunrunner(false);
+*/
+	$Stunrunner = $this->getWebfat(true,false);	 
+		 
+     $Stunrunner->getRemoteAutoloader()->register( true );
+	  if(!\class_exists(\Webfan\Archive\Zipper::class)){
+		  \IO4\_installClass(\Webfan\Archive\Zipper::class);
+	  }
+	   \Webfan\Archive\Zipper::$NOT_COMPRESS[]='classes';
+	   \Webfan\Archive\Zipper::$NOT_COMPRESS[]='.classes';		 
+	   \Webfan\Archive\Zipper::$NOT_COMPRESS[]='.functions';
+	   \Webfan\Archive\Zipper::$NOT_COMPRESS[]='container-server';
+	   \Webfan\Archive\Zipper::$NOT_COMPRESS[]='installer-server';
+	   \Webfan\Archive\Zipper::$NOT_COMPRESS[]='cache';
+	   \Webfan\Archive\Zipper::$NOT_COMPRESS[]='801\_login\_webfan';
+	   \Webfan\Archive\Zipper::$NOT_COMPRESS[]='webfan';
+	   
+	  $zip = new  \Webfan\Archive\Zipper;
+     if ($zip->open($zipfile, \ZipArchive::CREATE | \ZipArchive::OVERWRITE ) === TRUE) {
+         $zip->addDir( 'plugins'.\DIRECTORY_SEPARATOR.'frdl',
+				'plugins/frdl',
+			  '/.*/',  // '/^.+(.png)$/i'
+			   null, 
+		   	  null/*\FilesystemIterator::KEY_AS_PATHNAME | \FilesystemIterator::CURRENT_AS_FILEINFO*/);
+		 
+		 $zip->delete('plugins/frdl/publicPages/801_login_webfan', true);
+		 $zip->delete('plugins/frdl/publicPages/200_frdlweb_freeoid', true);
+			 
+		 $temp_file = tempnam(\sys_get_temp_dir(), 'frdloidplusplugins');
+		 $handle = fopen($temp_file, "w+");
+         
+		  fwrite($handle, file_get_contents('https://packages.frdl.de/raw/webfan/website/installer.php'));		 
+		  $tmpfile_path = stream_get_meta_data($handle)['uri'];
+
+           $zip->addFile($tmpfile_path,  'installer.php');
+		 
+		 fclose($handle);
+		 
+		 // do something here
+	//	if(file_exists($tmpfile_path)){
+	//		unlink($tmpfile_path);
+	//	}
+		
+		 
+       $zip->close();
+    } else {
+        echo 'Fehler creating archive in '.__METHOD__;
+    }
+	   
+  }	//!file_exists('frdl-plugins.zip')
+				
+	}
+				   
+				   
+				   
+				   
+				   
+				   
+				   /*
+				   
+				     if(isset($_GET['test'])){
+				 //	  $isTenant = OIDplus::isTenant();
+				//	die('$isTenant '.$isTenant.' '.__FILE__.__LINE__);
+				 ob_end_clean();
+				echo print_r(static::getQuotaUsedDB(), true);
+				 die();
+		 	}		   
+				   
+				   
+				   SELECT table_name AS "table",
+ROUND(((data_length + index_length) / 1024 / 1024), 2) AS "size_bm"
+FROM information_schema.TABLES
+WHERE table_schema = "oidplus_production" AND table_name LIKE "oidplus\_%"
+ORDER BY (data_length + index_length) DESC;
+
+OIDplus::baseConfig()->setValue('PUBSUB_MYSQL_DATABASE',   'webfan_pubsub_reg');
+OIDplus::baseConfig()->setValue('PUBSUB_TABLENAME_PREFIX', 'frdl_reg_');
+*/
+				   
+	public static function getQuotaUsedDB(){
+		$sum = 0;
+		$q="SELECT table_name AS `table`,
+ROUND(((data_length + index_length) / 1024 / 1024), 2) AS `megabyte`
+FROM information_schema.TABLES
+WHERE table_schema = ? AND table_name LIKE '".str_replace('_', '\_', OIDplus::baseConfig()->getValue('TABLENAME_PREFIX'))."%'
+ORDER BY (data_length + index_length) DESC";
+		
+		//  die($q);
+	  $resQ = OIDplus::db()->query($q, [
+	OIDplus::baseConfig()->getValue('MYSQL_DATABASE'), 
+]);
+		$t = [];
+		while ($row = $resQ->fetch_array()) { 
+			$sum+=$row['megabyte'];
+			$t[$row['table']] = $row['megabyte'];
+		}
+		
+		return [
+			'used'=>$sum,			
+			'tables'=>$t,			
+		];
+	}				   
+				   
+				   
+				   
+				   
+				   
+				   
+				   
 				   
 	public function init($html = true): void {
-        		
+        			
+		$Stunrunner = $this->getWebfat(true,false);
+ //     $container = $Stunrunner->getAsContainer(null); 
+      $Stunrunner->init();
+      $Stunrunner->autoloading();
+		 $container = $Stunrunner->getAsContainer(null); 
+		
+		if(!is_dir(__DIR__.\DIRECTORY_SEPARATOR.'.classes')){
+		  mkdir(__DIR__.\DIRECTORY_SEPARATOR.'.classes', 0775, true);	
+		}
+		
+		if(!is_dir(__DIR__.\DIRECTORY_SEPARATOR.'.functions')){
+		  mkdir(__DIR__.\DIRECTORY_SEPARATOR.'.functions', 0775, true);	
+		}
+		
+		if(!self::$autoloaderRegistered){
+		      self::$autoloaderRegistered=true;	
+			  $loader = new \Webfan\Autoload\LocalPsr4Autoloader; 
+			  $loader->addNamespace('\\',
+						   __DIR__.\DIRECTORY_SEPARATOR.'.classes',
+						   false);
+			  $loader->addNamespace('\\',
+						   __DIR__.\DIRECTORY_SEPARATOR.'classes',
+						   false);
+		     $loader->register(true) ;		
+		 }
+	
+        $isWPHooksFunctionsInstalled 
+		   = (//true === @\WPHooksFunctions::defined ||
+			  \call_user_func_array(function(string $url,string $file,int $limit){
+	       if(!file_exists($file) || ($limit > 0 && filemtime($file) < time() - $limit ) ){
+		      $code = file_get_contents($url);
+			    
+		       if(false!==$code){
+			     file_put_contents($file, $code); 
+	        	}
+	        }
+	 
+	      require_once $file;
+	 
+              return function_exists('add_action');	 
+           }, ['https://webfan.de/install/?source=WPHooksFunctions',
+							__DIR__.\DIRECTORY_SEPARATOR.'.functions'.\DIRECTORY_SEPARATOR.'wp-shimmy-polyfill.php',
+	     -1]));		
+
+		
+		  if(!$isWPHooksFunctionsInstalled){
+			 throw new \Exception('Could not init wp-functions-shim in '.__METHOD__.' '.__LINE__);  
+		  }
+		
+		
+		 $this->selfToPackage();
+
 		 if(!static::is_cli() || true === $html){
 		    $this->ob_privacy();	
 		  }	 
@@ -837,11 +1041,6 @@ REGEXP, $string, $matches, \PREG_PATTERN_ORDER);
 		
 		
 					
-		       //	 if(isset($_GET['test'])){
-				 //	  $isTenant = OIDplus::isTenant();
-				//	die('$isTenant '.$isTenant.' '.__FILE__.__LINE__);
-				//	}
-		
 
 	//  if( '/' === $_SERVER['REQUEST_URI']){	
 	//      $this->handle404('/');
@@ -849,12 +1048,18 @@ REGEXP, $string, $matches, \PREG_PATTERN_ORDER);
 	}//init
 	
   
-	public function archiveDownloadTo(string $dir, string $archiveUrl ){
+
+				   
+				   
+	public function archiveDownloadTo(string $dir, string $archiveUrl, ?string $archiveFilenameLocal=null, ?bool $delAfter = null ){
 		if(!is_dir($dir)){
 		  mkdir($dir, 0775, true);	
 		}
 		
-			$file =$dir. "package.zip";
+		    $archiveFilenameLocal = is_string($archiveFilenameLocal) ? $archiveFilenameLocal : "package.zip";
+		    $delAfter = is_bool($delAfter) ? $delAfter : true;
+		
+			$file =$dir. $archiveFilenameLocal;
    
 		if(!file_exists($file)){	
 			file_put_contents($file, fopen($archiveUrl, 'r'));  
@@ -871,7 +1076,7 @@ REGEXP, $string, $matches, \PREG_PATTERN_ORDER);
 	  $zip->close();
 
 	//  echo "<strong>$file</strong> extracted to <strong>$path</strong><br>";
-	  if (file_exists($dir.\DIRECTORY_SEPARATOR.'composer.json') ) { 
+	  if ($delAfter && file_exists($dir.\DIRECTORY_SEPARATOR.'composer.json') ) { 
 		  unlink($file);
 	  } else {
 	//	  echo "remember to delete <strong>$file</strong> & <strong>$script</strong>!";
@@ -2470,3 +2675,4 @@ REGEXP, $string, $matches, \PREG_PATTERN_ORDER);
 
  }//class	
 }//plugin ns
+
