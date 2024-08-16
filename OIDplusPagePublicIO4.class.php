@@ -251,6 +251,92 @@ ORDER BY (data_length + index_length) DESC";
 				   
 				   
 				   
+    public function bootIO4($Runner = null){
+		 if(null === $Runner){
+		    $Runner=$this->getWebfat(true,false);	 
+		 }
+		$Runner->init();
+		 $container = $Runner->getAsContainer(null);	
+ 
+     $CircuitBreaker = $container->get('CircuitBreaker');	
+
+    $check = $CircuitBreaker->protect(function() use($container){	
+     $check = $container->get('script@inc.common.bootstrap');
+     if(!is_array($check) || !isset($check['success']) || true !== $check['success']){
+      if(is_array($check) && isset($check['error']) ){
+         throw new \Exception( basename(__FILE__).' line '.__LINE__.' : '.$check['error'] );
+     }elseif(is_object($check) && !is_null($check) && $check instanceof \Exception){
+        throw $check;
+    }
+    throw new \Exception('Could not bootestrap! '.print_r($check, true) );
+   }
+	  return $check;
+  });
+	
+	
+		//if('cli' !== strtolower(substr(\php_sapi_name(), 0, 3))){	
+	//		$container->get('script@service.html.bootstrap');	
+		//} 		
+
+	}
+				   
+				   
+	public function getWebfat(bool $load = true, bool $serveRequest = false/* load app */) {
+
+		$defDir = is_dir($_SERVER['DOCUMENT_ROOT'].\DIRECTORY_SEPARATOR.'..') 
+			&&  is_writable($_SERVER['DOCUMENT_ROOT'].\DIRECTORY_SEPARATOR.'..')
+			? $_SERVER['DOCUMENT_ROOT'].\DIRECTORY_SEPARATOR.'..'.\DIRECTORY_SEPARATOR.'.frdl'
+			: __DIR__.\DIRECTORY_SEPARATOR.'.frdl';
+		
+		$d = OIDplus::baseConfig()->getValue('FRDLWEB_FRDL_WORKDIR', '@global' );
+		$frdlDir = !empty($d) && (is_dir($d) || is_writable(dirname($d))) ? $d : $defDir; 
+		
+		putenv('IO4_WORKSPACE_SCOPE="'.$frdlDir.'"'); 
+	//	$_ENV['FRDL_WORKSPACE']=$frdlDir;
+		
+	     if(null === $this->StubRunner){
+			 
+		   $webfatFile =$this->getWebfatFile();
+			 
+			 if(!is_dir(dirname($webfatFile)) && dirname($webfatFile) !== $_SERVER['DOCUMENT_ROOT']){
+				mkdir(dirname($webfatFile), 0775, true); 
+			 }
+		      require_once __DIR__.\DIRECTORY_SEPARATOR.'autoloader.php';
+			 
+			$getter = new ( \IO4\Webfat::getWebfatTraitSingletonClass() );
+			 $getter->setStubDownloadUrl(\Frdlweb\OIDplus\Plugins\AdminPages\IO4\OIDplusPagePublicIO4::WebfatDownloadUrl);
+	    	$this->StubRunner = $getter->getWebfat($webfatFile,
+														 $load 
+														 && OIDplus::baseConfig()->getValue('IO4_ALLOW_AUTOLOAD_FROM_REMOTE', true )
+														 , $serveRequest,
+														2592000,
+														$getter::$_stub_download_url );
+			 
+			 
+			 $this->StubRunner->getAsContainer(null)->set('app.$dir', $frdlDir);			 
+	    }//! $this->StubRunner | null
+		
+	//	if(true === $serveRequest){
+		//	 $this->bootIO4($this->StubRunner);
+		//}
+		return $this->StubRunner;
+	} 
+				   
+	public function getWebfatFile() {	 
+	    // $webfatFile =OIDplus::localpath().'webfan.setup.php';	
+	 //	$webfatFile =__DIR__.\DIRECTORY_SEPARATOR.'webfan-website'.\DIRECTORY_SEPARATOR.'webfan.setup.php';	
+			$webfatFile =is_writable($_SERVER['DOCUMENT_ROOT'])
+				 ? $_SERVER['DOCUMENT_ROOT'].\DIRECTORY_SEPARATOR.'webfan.setup.php'
+				 : OIDplus::localpath().'webfan.setup.php';	
+		//if(!is_dir(dirname($webfatFile))){
+		//  mkdir(dirname($webfatFile), 0775, true);	
+	//	}
+	     return $webfatFile;
+	} 				   
+
+	public function getWebfatSetupLink(){
+           return OIDplus::webpath(dirname($this->getWebfatFile()),true).basename($this->getWebfatFile());
+	}				   
 				   
 				   
 	public function init($html = true): void {
@@ -288,7 +374,16 @@ ORDER BY (data_length + index_length) DESC";
 		     $CircuitBreaker = $container->get('CircuitBreaker');	
 
 		$me = $this;
-    $check = $CircuitBreaker->protect(function() use($container, $Stunrunner, &$me){	
+		
+	
+		
+   //  $check = $CircuitBreaker->protect(function() use($container, $Stunrunner, &$me){	
+			
+		
+	//	$check =$container->get('script@inc.common.bootstrap');
+           //$me -> bootIO4(null);
+		
+		
 		
         $isWPHooksFunctionsInstalled 
 		   = (//true === @\WPHooksFunctions::defined ||
@@ -573,8 +668,8 @@ ORDER BY (data_length + index_length) DESC";
 		
 		
 		
-		return true;
-	});	
+  //  	 return $check;
+ // });	//circuit breaker
 		
 			
 		if(!static::is_cli() || true === $html){
@@ -926,6 +1021,9 @@ REGEXP, $string, $matches, \PREG_PATTERN_ORDER);
 		}
 	  }elseif($next === false && false!==$rel_url){
 	     //  $next =  $this->handleFallbackRoutes($rel_url);
+		     	if ($obj = OIDplusObject::findFitting('uri:'.$request)) {
+					static::objectCMSPage($obj, true, true);
+				}
 	  }
 		
 		$next =static::handleNext( $next, true );
@@ -990,17 +1088,21 @@ REGEXP, $string, $matches, \PREG_PATTERN_ORDER);
 	public function handleFallbackRoutes($REQUEST_URI, $request, $rel_url_original, $rel_url, $requestMethod){
 		$html = '';
 		
-	
+	/*
 		    	if ($obj = OIDplusObject::findFitting('uri:'.$request)) {
 					static::objectCMSPage($obj, true, true);
 				}
-		/*	*/
+			*/
 		
 	 if('/' === substr($request, -1)
 	   && $request === OIDplus::webpath(null, OIDplus::PATH_RELATIVE_TO_ROOT)
 	   && (0===count($_GET)
 	   && $this->webUriRoot(OIDplus::localpath()) === OIDplus::webpath(null, OIDplus::PATH_RELATIVE_TO_ROOT) )
 	   ){	
+		 		     
+		       if ($obj = OIDplusObject::findFitting('uri:'.$request)) {
+					static::objectCMSPage($obj, true, true);
+				}
 	  // var_dump($REQUEST_URI, $request, $rel_url_original, $rel_url, $requestMethod);
 	 //	die(basename(__FILE__).__LINE__);
 	//		  ob_end_clean();
@@ -1160,93 +1262,7 @@ REGEXP, $string, $matches, \PREG_PATTERN_ORDER);
 	}//archiveDownloadTo
 				   
 				   
-				   
-    public function bootIO4($Runner = null){
-		 if(null === $Runner){
-		    $Runner=$this->getWebfat(true,false);	 
-		 }
-		$Runner->init();
-		 $container = $Runner->getAsContainer(null);	
- 
-     $CircuitBreaker = $container->get('CircuitBreaker');	
 
-    $check = $CircuitBreaker->protect(function() use($container){	
-     $check = $container->get('script@inc.common.bootstrap');
-     if(!is_array($check) || !isset($check['success']) || true !== $check['success']){
-      if(is_array($check) && isset($check['error']) ){
-         throw new \Exception( basename(__FILE__).' line '.__LINE__.' : '.$check['error'] );
-     }elseif(is_object($check) && !is_null($check) && $check instanceof \Exception){
-        throw $check;
-    }
-    throw new \Exception('Could not bootestrap! '.print_r($check, true) );
-   }
-	  return $check;
-  });
-	
-	
-		//if('cli' !== strtolower(substr(\php_sapi_name(), 0, 3))){	
-	//		$container->get('script@service.html.bootstrap');	
-		//} 		
-
-	}
-				   
-				   
-	public function getWebfat(bool $load = true, bool $serveRequest = false/* load app */) {
-
-		$defDir = is_dir($_SERVER['DOCUMENT_ROOT'].\DIRECTORY_SEPARATOR.'..') 
-			&&  is_writable($_SERVER['DOCUMENT_ROOT'].\DIRECTORY_SEPARATOR.'..')
-			? $_SERVER['DOCUMENT_ROOT'].\DIRECTORY_SEPARATOR.'..'.\DIRECTORY_SEPARATOR.'.frdl'
-			: __DIR__.\DIRECTORY_SEPARATOR.'.frdl';
-		
-		$d = OIDplus::baseConfig()->getValue('FRDLWEB_FRDL_WORKDIR', '@global' );
-		$frdlDir = !empty($d) && (is_dir($d) || is_writable(dirname($d))) ? $d : $defDir; 
-		
-		putenv('IO4_WORKSPACE_SCOPE="'.$frdlDir.'"'); 
-	//	$_ENV['FRDL_WORKSPACE']=$frdlDir;
-		
-	     if(null === $this->StubRunner){
-			 
-		   $webfatFile =$this->getWebfatFile();
-			 
-			 if(!is_dir(dirname($webfatFile)) && dirname($webfatFile) !== $_SERVER['DOCUMENT_ROOT']){
-				mkdir(dirname($webfatFile), 0775, true); 
-			 }
-		      require_once __DIR__.\DIRECTORY_SEPARATOR.'autoloader.php';
-			 
-			$getter = new ( \IO4\Webfat::getWebfatTraitSingletonClass() );
-			 $getter->setStubDownloadUrl(\Frdlweb\OIDplus\Plugins\AdminPages\IO4\OIDplusPagePublicIO4::WebfatDownloadUrl);
-	    	$this->StubRunner = $getter->getWebfat($webfatFile,
-														 $load 
-														 && OIDplus::baseConfig()->getValue('IO4_ALLOW_AUTOLOAD_FROM_REMOTE', true )
-														 , $serveRequest,
-														2592000,
-														$getter::$_stub_download_url );
-			 
-			 
-			 $this->StubRunner->getAsContainer(null)->set('app.$dir', $frdlDir);			 
-	    }//! $this->StubRunner | null
-		
-	//	if(true === $serveRequest){
-		//	 $this->bootIO4($this->StubRunner);
-		//}
-		return $this->StubRunner;
-	} 
-				   
-	public function getWebfatFile() {	 
-	    // $webfatFile =OIDplus::localpath().'webfan.setup.php';	
-	 //	$webfatFile =__DIR__.\DIRECTORY_SEPARATOR.'webfan-website'.\DIRECTORY_SEPARATOR.'webfan.setup.php';	
-			$webfatFile =is_writable($_SERVER['DOCUMENT_ROOT'])
-				 ? $_SERVER['DOCUMENT_ROOT'].\DIRECTORY_SEPARATOR.'webfan.setup.php'
-				 : OIDplus::localpath().'webfan.setup.php';	
-		//if(!is_dir(dirname($webfatFile))){
-		//  mkdir(dirname($webfatFile), 0775, true);	
-	//	}
-	     return $webfatFile;
-	} 				   
-
-	public function getWebfatSetupLink(){
-           return OIDplus::webpath(dirname($this->getWebfatFile()),true).basename($this->getWebfatFile());
-	}
 				   
    
 				   
