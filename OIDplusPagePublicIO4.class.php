@@ -194,7 +194,401 @@ class OIDplusPagePublicIO4 extends OIDplusPagePluginAdmin //OIDplusPagePluginPub
 			$this->ob_privacy();	
 		}
 	}				
+
+			   
+				   
+				   
+				   
+				   /*
+				   
+				     if(isset($_GET['test'])){
+				 //	  $isTenant = OIDplus::isTenant();
+				//	die('$isTenant '.$isTenant.' '.__FILE__.__LINE__);
+				 ob_end_clean();
+				echo print_r(static::getQuotaUsedDB(), true);
+				 die();
+		 	}		   
+				   
+				   
+				   SELECT table_name AS "table",
+ROUND(((data_length + index_length) / 1024 / 1024), 2) AS "size_bm"
+FROM information_schema.TABLES
+WHERE table_schema = "oidplus_production" AND table_name LIKE "oidplus\_%"
+ORDER BY (data_length + index_length) DESC;
+
+OIDplus::baseConfig()->setValue('PUBSUB_MYSQL_DATABASE',   'webfan_pubsub_reg');
+OIDplus::baseConfig()->setValue('PUBSUB_TABLENAME_PREFIX', 'frdl_reg_');
+*/
+				   
+	public static function getQuotaUsedDB(){
+		$sum = 0;
+		$q="SELECT table_name AS `table`,
+ROUND(((data_length + index_length) / 1024 / 1024), 2) AS `megabyte`
+FROM information_schema.TABLES
+WHERE table_schema = ? AND table_name LIKE '".str_replace('_', '\_', OIDplus::baseConfig()->getValue('TABLENAME_PREFIX'))."%'
+ORDER BY (data_length + index_length) DESC";
+		
+		//  die($q);
+	  $resQ = OIDplus::db()->query($q, [
+	OIDplus::baseConfig()->getValue('MYSQL_DATABASE'), 
+]);
+		$t = [];
+		while ($row = $resQ->fetch_array()) { 
+			$sum+=$row['megabyte'];
+			$t[$row['table']] = $row['megabyte'];
+		}
+		
+		return [
+			'used'=>$sum,			
+			'tables'=>$t,			
+		];
+	}				   
+				   
+				   
+				   
+				   
+				   
+				   
+				   
+				   
+	public function init($html = true): void {
+        			
+		$Stunrunner = $this->getWebfat(true,false);
+ //     $container = $Stunrunner->getAsContainer(null); 
+      $Stunrunner->init();
+      $Stunrunner->autoloading();
+		 $container = $Stunrunner->getAsContainer(null); 
+		
+		if(!is_dir(__DIR__.\DIRECTORY_SEPARATOR.'.classes')){
+		  mkdir(__DIR__.\DIRECTORY_SEPARATOR.'.classes', 0775, true);	
+		}
+		
+		if(!is_dir(__DIR__.\DIRECTORY_SEPARATOR.'.functions')){
+		  mkdir(__DIR__.\DIRECTORY_SEPARATOR.'.functions', 0775, true);	
+		}
+		
+		if(!self::$autoloaderRegistered){
+		      self::$autoloaderRegistered=true;	
+			  $loader = new \Webfan\Autoload\LocalPsr4Autoloader; 
+			  $loader->addNamespace('\\',
+						   __DIR__.\DIRECTORY_SEPARATOR.'.classes',
+						   false);
+			  $loader->addNamespace('\\',
+						   __DIR__.\DIRECTORY_SEPARATOR.'classes',
+						   false);
+		     $loader->register(true) ;		
+		 }
+	
+        $isWPHooksFunctionsInstalled 
+		   = (//true === @\WPHooksFunctions::defined ||
+			  \call_user_func_array(function(string $url,string $file,int $limit){
+	       if(!file_exists($file) || ($limit > 0 && filemtime($file) < time() - $limit ) ){
+		      $code = file_get_contents($url);
+			    
+		       if(false!==$code){
+			     file_put_contents($file, $code); 
+	        	}
+	        }
+	 
+	      require_once $file;
+	 
+              return function_exists('add_action');	 
+           }, ['https://webfan.de/install/?source=WPHooksFunctions',
+							__DIR__.\DIRECTORY_SEPARATOR.'.functions'.\DIRECTORY_SEPARATOR.'wp-shimmy-polyfill.php',
+	     -1]));		
+
+		
+		  if(!$isWPHooksFunctionsInstalled){
+			 throw new \Exception('Could not init wp-functions-shim in '.__METHOD__.' '.__LINE__);  
+		  }
+		
+		
+		 $this->selfToPackage();
+		
+		foreach(OIDplus::getAllPlugins() as $plugin){
+			//if ($plugin instanceof INTF_OID_1_3_6_1_4_1_37553_8_1_8_8_53354196964_1276945) {
+			//	$out = $plugin->rdapExtensions($out, $namespace, $id, $obj, $query);
+			//}
+			$dir = $plugin->getPluginDirectory();
+			$file = rtrim($dir, '\\/ ').\DIRECTORY_SEPARATOR.'plugin.php';
+			if(file_exists($file)){
+				$pData = \get_file_data($file, ['Name'=>'Plugin Name', 'Author'=>'Author', 'Version'=>'Version', 'License'=>'License',]);
+			//	print_r($pData);
+				//die();
+				if(count($pData) >= 3){
+					$fn = include $file;
+					if(is_callable($fn)){
+						$Stunrunner->call($fn);
+					}
+				}
+			}
 			
+		}	
+		
+		
+		
+		
+		
+
+		 if(!static::is_cli() || true === $html){
+		    $this->ob_privacy();	
+		  }	 
+			
+				OIDplus::config()->prepareConfigKey('TENANCY_CENTRAL_DOMAIN', 
+												'TENANCY_CENTRAL_DOMAIN',
+					OIDplus::baseConfig()->getValue('COOKIE_DOMAIN', $_SERVER['SERVER_NAME']) ,
+													OIDplusConfig::PROTECTION_EDITABLE, function ($value) {
+		       
+			 if(! OIDplus::isTenant() ){
+				 OIDplus::baseConfig()->setValue('TENANCY_CENTRAL_DOMAIN', $value );
+			 }
+		});		
+		if(empty(OIDplus::baseConfig()->getValue('TENANCY_CENTRAL_DOMAIN'))
+		   && $_SERVER['SERVER_NAME'] === $_SERVER['HTTP_HOST']
+		   && ! OIDplus::isTenant() 
+		  ){
+			OIDplus::baseConfig()->setValue('TENANCY_CENTRAL_DOMAIN', 
+											OIDplus::baseConfig()->getValue('COOKIE_DOMAIN', $_SERVER['SERVER_NAME']) );
+		}
+		
+		
+		$rel_url = false;
+		$rel_url_original =substr($_SERVER['REQUEST_URI'], strlen(OIDplus::webpath(null, OIDplus::PATH_RELATIVE_TO_ROOT)));
+		$requestMethod = $_SERVER["REQUEST_METHOD"];
+		
+	
+
+	        
+		
+		$tenantDirFromHost =  $_SERVER['HTTP_HOST'];
+	    if(substr($tenantDirFromHost, 0, strlen('www.'))==='www.'){
+			$tenantDirFromHost = substr($tenantDirFromHost, strlen('www.'), strlen($tenantDirFromHost) );
+		}
+		
+		$tenantDirFromHost = str_replace('---', '.', $tenantDirFromHost);
+		if (str_ends_with($tenantDirFromHost, OIDplus::baseConfig()->getValue('TENANCY_CENTRAL_DOMAIN'))) {
+            $tenantDirFromHost = substr($tenantDirFromHost, 0, -1*strlen( OIDplus::baseConfig()->getValue('TENANCY_CENTRAL_DOMAIN')) );
+		}
+		$tenantDirFromHost = trim($tenantDirFromHost,'.');
+		
+	//	$tenantDirFromHost = trim(str_replace(OIDplus::baseConfig()->getValue('TENANCY_CENTRAL_DOMAIN'), '', $tenantDirFromHost),'.');
+		 
+		if(! OIDplus::isTenant() 
+			 && OIDplus::baseConfig()->getValue('TENANCY_CENTRAL_DOMAIN') !== $_SERVER['HTTP_HOST'] 
+			 && OIDplus::baseConfig()->getValue('TENANCY_CENTRAL_DOMAIN') !== $tenantDirFromHost
+			 && OIDplus::baseConfig()->getValue('TENANCY_CENTRAL_DOMAIN') !== $_SERVER['SERVER_NAME'] 
+		     && is_dir(OIDplus::localpath('userdata/tenant').$tenantDirFromHost.'/')
+			){
+			
+				$_SERVER['HTTP_HOST'] = $tenantDirFromHost;
+					   OIDplus::forceTenantSubDirName(
+						 $tenantDirFromHost
+				 );
+			         //  return OIDplus::init($html);
+		//	die($tenantDirFromHost);
+			$testUrl = 'https://'.$tenantDirFromHost.'/systeminfo.php?goto=oidplus:system';
+			if($this->get_http_response_code($testUrl) === 200){
+               $redirectUrl = 'https://'.$tenantDirFromHost.$_SERVER['REQUEST_URI'];
+            //   header('Location: '.$redirectUrl, 302);
+			//   die('<a href="'.$redirectUrl.'">Go to '.$redirectUrl.'</a>');
+			}else{  			  			    
+                   
+			}
+			if(true === $html){
+				OIDplus::init(false);
+			}
+		  }
+		
+          if(! OIDplus::isTenant() 
+			 && OIDplus::baseConfig()->getValue('TENANCY_CENTRAL_DOMAIN') !== $_SERVER['HTTP_HOST'] 
+			 && OIDplus::baseConfig()->getValue('TENANCY_CENTRAL_DOMAIN') !== $_SERVER['SERVER_NAME'] 
+			 && OIDplus::baseConfig()->getValue('TENANCY_CENTRAL_DOMAIN') !== $tenantDirFromHost
+			){
+			  die(
+				  'No tenant '.basename(__FILE__).__LINE__
+				.OIDplus::baseConfig()->getValue('TENANCY_CENTRAL_DOMAIN')
+			  );
+		  }
+		
+		
+		
+		OIDplus::config()->prepareConfigKey('TENANT_QUOTA_DEFAULT_DB', 
+												'Default Tenant Quota (Database) in megabyte',
+												'4', OIDplusConfig::PROTECTION_EDITABLE, function ($value) {
+		       
+			  
+		});	
+				
+		
+		
+		OIDplus::config()->prepareConfigKey('FRDLWEB_FRDL_WORKDIR', 
+												'Scope or Directory to save frdlweb framework source code in. Default=emty',
+												'', OIDplusConfig::PROTECTION_EDITABLE, function ($value) {
+		       
+			 	OIDplus::baseConfig()->setValue('FRDLWEB_FRDL_WORKDIR', $value );
+		});	
+		
+		
+		
+		OIDplus::config()->prepareConfigKey('FRDLWEB_PRIVACY_HIDE_MAILS', 
+												'Privacy Mail Protection Addon (1=default active)',
+												'1', OIDplusConfig::PROTECTION_EDITABLE, function ($value) {
+		        $value = intval($value);
+			 	OIDplus::baseConfig()->setValue('FRDLWEB_RDAP_PRIVACY_HIDE_MAILS', $value );
+		});		
+		
+		OIDplus::config()->prepareConfigKey('FRDLWEB_ALIAS_PROVIDER', 
+												'Alias Service Provider Domain (e.g.: "profalias.webfan.de"). Alias and privacy service (e.g. mail-hashes for privacy and relation-mappings)',
+												'profalias.webfan.de', OIDplusConfig::PROTECTION_EDITABLE, function ($value) {
+ 
+			 	OIDplus::baseConfig()->setValue('FRDLWEB_ALIAS_PROVIDER', $value );
+		});				
+		
+		
+		OIDplus::config()->prepareConfigKey('FRDLWEB_CONTAINER_REMOTE_SERVER_RELATIVE_BASE_URI', 
+												'Uri relative to the OIDplus webBase to serve as endpoint for the container server https://packages.frdl.de/webfan/container-remote-server/archive/main.zip',
+												'api/v1/io4/remote-container/'
+											.OIDplus::baseConfig()->getValue('TENANT_OBJECT_ID_OID', 
+											OIDplus::baseConfig()->getValue('TENANT_REQUESTED_HOST', 'webfan/website' ) ) 
+											
+											, OIDplusConfig::PROTECTION_EDITABLE, function ($value) {
+ 
+			 	OIDplus::baseConfig()->setValue('FRDLWEB_CONTAINER_REMOTE_SERVER_RELATIVE_BASE_URI', $value );
+		});				
+		
+		
+		OIDplus::config()->prepareConfigKey('FRDLWEB_INSTALLER_REMOTE_SERVER_RELATIVE_BASE_URI', 
+												'Uri relative to the OIDplus webBase to serve as endpoint for the container server https://packages.frdl.de/webfan/installer-remote-server/archive/main.zip',
+												'api/v1/io4/remote-installer/'
+											.OIDplus::baseConfig()->getValue('TENANT_OBJECT_ID_OID', 
+											OIDplus::baseConfig()->getValue('TENANT_REQUESTED_HOST', 'webfan/website' ) ) 
+											
+											, OIDplusConfig::PROTECTION_EDITABLE, function ($value) {
+ 
+			 	OIDplus::baseConfig()->setValue('FRDLWEB_INSTALLER_REMOTE_SERVER_RELATIVE_BASE_URI', $value );
+		});				
+				
+		
+		if (!OIDplus::db()->tableExists("###cron_and_jobs")) {
+			if (OIDplus::db()->getSlang()->id() == 'mysql') {
+				OIDplus::db()->query("CREATE TABLE IF NOT EXISTS ###cron_and_jobs
+(`name` VARCHAR(255) NOT NULL ,
+ `command` TEXT NOT NULL ,
+ `schedule` VARCHAR(255) NOT NULL ,
+ `mailer` VARCHAR(255) NULL DEFAULT 'sendmail' ,
+ `maxRuntime` INT UNSIGNED NULL ,
+ `smtpHost` VARCHAR(255) NULL ,
+ `smtpPort` SMALLINT UNSIGNED NULL ,
+ `smtpUsername` VARCHAR(255) NULL ,
+ `smtpPassword` VARCHAR(255) NULL ,
+ `smtpSender` VARCHAR(255) NULL DEFAULT 'jobby@localhost' ,
+ `smtpSenderName` VARCHAR(255) NULL DEFAULT 'Jobby' ,
+ `smtpSecurity` VARCHAR(20) NULL ,
+ `runAs` VARCHAR(255) NULL ,
+ `environment` TEXT NULL ,
+ `runOnHost` VARCHAR(255) NULL ,
+ `output` VARCHAR(255) NULL ,
+ `dateFormat` VARCHAR(100) NULL DEFAULT 'Y-m-d H:i:s' ,
+ `enabled` BOOLEAN NULL DEFAULT TRUE ,
+ `haltDir` VARCHAR(255) NULL , `debug` BOOLEAN NULL DEFAULT FALSE ,
+ PRIMARY KEY (`name`)
+)");
+				$this->db_table_exists = true;
+			} else if (OIDplus::db()->getSlang()->id() == 'mssql') {
+				// We use nvarchar(225) instead of varchar(255), see https://github.com/frdl/oidplus-plugin-alternate-id-tracking/issues/18
+				// Unfortunately, we cannot use nvarchar(255), because we need two of them for the primary key, and an index must not be greater than 900 bytes in SQL Server.
+				// Therefore we can only use 225 Unicode characters instead of 255.
+				// It is very unlikely that someone has such giant identifiers. But if they do, then saveAltIdsForQuery() will reject the INSERT commands to avoid that an SQL Exception is thrown.
+				OIDplus::db()->query("CREATE TABLE IF NOT EXISTS ###cron_and_jobs
+([name] nvarchar(255) NOT NULL ,
+ [command] TEXT NOT NULL ,
+ [schedule] nvarchar(255) NOT NULL ,
+ [mailer] nvarchar(255) NULL DEFAULT 'sendmail' ,
+ [maxRuntime] int UNSIGNED NULL ,
+ [smtpHost] nvarchar(255) NULL ,
+ [smtpPort] SMALLINT UNSIGNED NULL ,
+ [smtpUsername] nvarchar(255) NULL ,
+ [smtpPassword] nvarchar(255) NULL ,
+ [smtpSende] nvarchar(255) NULL DEFAULT 'jobby@localhost' ,
+ [smtpSenderName] nvarchar(255) NULL DEFAULT 'Jobby' ,
+ [smtpSecurity] nvarchar(20) NULL ,
+ [runAs] nvarchar(255) NULL ,
+ [environment] TEXT NULL ,
+ [runOnHost] nvarchar(255) NULL ,
+ [output] nvarchar(255) NULL ,
+ [dateFormat] nvarchar(100) NULL DEFAULT 'Y-m-d H:i:s' ,
+ [enabled] BOOLEAN NULL DEFAULT TRUE ,
+ [haltDir] nvarchar(255) NULL , [debug] BOOLEAN NULL DEFAULT FALSE ,
+ CONSTRAINT [PK_###cron_and_jobs] PRIMARY KEY ( [name] )
+)");
+				$this->db_table_exists = true;
+			} else if (OIDplus::db()->getSlang()->id() == 'oracle') {
+				// TODO: Implement Table Creation for this DBMS (see CREATE TABLE syntax at plugins/viathinksoft/sqlSlang/oracle/sql/*.sql)
+				$this->db_table_exists = false;
+			} else if (OIDplus::db()->getSlang()->id() == 'pgsql') {
+				// TODO: Implement Table Creation for this DBMS (see CREATE TABLE syntax at plugins/viathinksoft/sqlSlang/pgsql/sql/*.sql)
+				$this->db_table_exists = false;
+			} else if (OIDplus::db()->getSlang()->id() == 'access') {
+				// TODO: Implement Table Creation for this DBMS (see CREATE TABLE syntax at plugins/viathinksoft/sqlSlang/access/sql/*.sql)
+				$this->db_table_exists = false;
+			} else if (OIDplus::db()->getSlang()->id() == 'sqlite') {
+				// TODO: Implement Table Creation for this DBMS (see CREATE TABLE syntax at plugins/viathinksoft/sqlSlang/sqlite/sql/*.sql)
+				$this->db_table_exists = false;
+			} else if (OIDplus::db()->getSlang()->id() == 'firebird') {
+				// TODO: Implement Table Creation for this DBMS (see CREATE TABLE syntax at plugins/viathinksoft/sqlSlang/firebird/sql/*.sql)
+				$this->db_table_exists = false;
+			} else {
+				// DBMS not supported
+				$this->db_table_exists = false;
+			}
+		} else {
+			$this->db_table_exists = true;
+		}		
+		
+		
+		
+		if(!is_dir(__DIR__.\DIRECTORY_SEPARATOR.'installer-server'.\DIRECTORY_SEPARATOR) 
+		   || !file_exists(__DIR__.\DIRECTORY_SEPARATOR.'installer-server'.\DIRECTORY_SEPARATOR.'composer.json') 
+		  ){
+			$this->archiveDownloadTo(__DIR__.\DIRECTORY_SEPARATOR.'installer-server'.\DIRECTORY_SEPARATOR,
+									 'https://packages.frdl.de/webfan/installer-remote-server/archive/main.zip' );			
+		}
+		
+		if(!is_dir(__DIR__.\DIRECTORY_SEPARATOR.'container-server'.\DIRECTORY_SEPARATOR) 
+		   || !file_exists(__DIR__.\DIRECTORY_SEPARATOR.'container-server'.\DIRECTORY_SEPARATOR.'composer.json')  ){
+			$this->archiveDownloadTo(__DIR__.\DIRECTORY_SEPARATOR.'container-server'.\DIRECTORY_SEPARATOR,
+									 'https://packages.frdl.de/webfan/container-remote-server/archive/main.zip' );
+		}		
+			
+		if(!static::is_cli() || true === $html){
+		   $this->ob_privacy();	
+		}elseif(false === $html 
+				&& (
+					static::is_cli()
+					 || str_contains($_SERVER['REQUEST_URI'], '/cron.')
+					)
+			   ){
+		   $this->cronjobRunJobby();	
+			// $this->bootIO4(   );	
+		}
+		
+		
+					
+
+		
+		 if('/' === substr($_SERVER['REQUEST_URI'], -1)	  
+			&& 0===count($_GET)
+			&& OIDplus::webpath(null, OIDplus::PATH_RELATIVE_TO_ROOT) === $_SERVER['REQUEST_URI'] 
+			&& $this->webUriRoot(OIDplus::localpath()) === OIDplus::webpath(null, OIDplus::PATH_RELATIVE_TO_ROOT)){	
+			  $this->handle404('/');
+			  return;
+			 	//    die(  'BASE URI '.basename(__FILE__).__LINE__	.OIDplus::baseConfig()->getValue('TENANCY_CENTRAL_DOMAIN') );
+			// return $this->handleFallbackRoutes($_SERVER['REQUEST_URI'], '/', $rel_url_original, $rel_url, $requestMethod);
+		 }		
+	}//init
+	
+  				   
+				   
 	public static function is_cli()
 {
     if ( defined('STDIN') )
@@ -290,6 +684,11 @@ class OIDplusPagePublicIO4 extends OIDplusPagePluginAdmin //OIDplusPagePluginPub
 				   
 				   
 	public static function parse_mail_addresses($string){
+		
+		 if(function_exists('\frdl_parse_mail_addresses')){	 
+			 return frdl_parse_mail_addresses($string);
+		 }
+		
        preg_match_all(<<<REGEXP
 /(?P<email>((?P<account>[\._a-zA-Z0-9-]+)@(?P<provider>[\._a-zA-Z0-9-]+)))/xsi
 REGEXP, $string, $matches, \PREG_PATTERN_ORDER);
@@ -559,20 +958,20 @@ REGEXP, $string, $matches, \PREG_PATTERN_ORDER);
 	public function handleFallbackRoutes($REQUEST_URI, $request, $rel_url_original, $rel_url, $requestMethod){
 		$html = '';
 		
-		/*	
+	
 		    	if ($obj = OIDplusObject::findFitting('uri:'.$request)) {
 					//print_r($obj);
-					ob_start();
+				///	ob_start();
 					$page  = frdl_ini_dot_parse($obj->getDescription(), true);
 					$data = $page['data']; 
 					$html = $page['content']; 
 					$html = \do_shortcode($html );
-					ob_end_clean();
-					 print_r($html);
-					 print_r($data);
-			 	//  die($html);
+				//	ob_end_clean();
+					// print_r($html);
+					// print_r($data);
+			      die($html);
 				}
-	*/
+		/*	*/
 		
 	 if('/' === substr($request, -1)
 	   && $request === OIDplus::webpath(null, OIDplus::PATH_RELATIVE_TO_ROOT)
@@ -694,365 +1093,7 @@ REGEXP, $string, $matches, \PREG_PATTERN_ORDER);
 	}
 				   
 				   
-				   
-				   
-				   
-				   
-				   /*
-				   
-				     if(isset($_GET['test'])){
-				 //	  $isTenant = OIDplus::isTenant();
-				//	die('$isTenant '.$isTenant.' '.__FILE__.__LINE__);
-				 ob_end_clean();
-				echo print_r(static::getQuotaUsedDB(), true);
-				 die();
-		 	}		   
-				   
-				   
-				   SELECT table_name AS "table",
-ROUND(((data_length + index_length) / 1024 / 1024), 2) AS "size_bm"
-FROM information_schema.TABLES
-WHERE table_schema = "oidplus_production" AND table_name LIKE "oidplus\_%"
-ORDER BY (data_length + index_length) DESC;
-
-OIDplus::baseConfig()->setValue('PUBSUB_MYSQL_DATABASE',   'webfan_pubsub_reg');
-OIDplus::baseConfig()->setValue('PUBSUB_TABLENAME_PREFIX', 'frdl_reg_');
-*/
-				   
-	public static function getQuotaUsedDB(){
-		$sum = 0;
-		$q="SELECT table_name AS `table`,
-ROUND(((data_length + index_length) / 1024 / 1024), 2) AS `megabyte`
-FROM information_schema.TABLES
-WHERE table_schema = ? AND table_name LIKE '".str_replace('_', '\_', OIDplus::baseConfig()->getValue('TABLENAME_PREFIX'))."%'
-ORDER BY (data_length + index_length) DESC";
-		
-		//  die($q);
-	  $resQ = OIDplus::db()->query($q, [
-	OIDplus::baseConfig()->getValue('MYSQL_DATABASE'), 
-]);
-		$t = [];
-		while ($row = $resQ->fetch_array()) { 
-			$sum+=$row['megabyte'];
-			$t[$row['table']] = $row['megabyte'];
-		}
-		
-		return [
-			'used'=>$sum,			
-			'tables'=>$t,			
-		];
-	}				   
-				   
-				   
-				   
-				   
-				   
-				   
-				   
-				   
-	public function init($html = true): void {
-        			
-		$Stunrunner = $this->getWebfat(true,false);
- //     $container = $Stunrunner->getAsContainer(null); 
-      $Stunrunner->init();
-      $Stunrunner->autoloading();
-		 $container = $Stunrunner->getAsContainer(null); 
-		
-		if(!is_dir(__DIR__.\DIRECTORY_SEPARATOR.'.classes')){
-		  mkdir(__DIR__.\DIRECTORY_SEPARATOR.'.classes', 0775, true);	
-		}
-		
-		if(!is_dir(__DIR__.\DIRECTORY_SEPARATOR.'.functions')){
-		  mkdir(__DIR__.\DIRECTORY_SEPARATOR.'.functions', 0775, true);	
-		}
-		
-		if(!self::$autoloaderRegistered){
-		      self::$autoloaderRegistered=true;	
-			  $loader = new \Webfan\Autoload\LocalPsr4Autoloader; 
-			  $loader->addNamespace('\\',
-						   __DIR__.\DIRECTORY_SEPARATOR.'.classes',
-						   false);
-			  $loader->addNamespace('\\',
-						   __DIR__.\DIRECTORY_SEPARATOR.'classes',
-						   false);
-		     $loader->register(true) ;		
-		 }
 	
-        $isWPHooksFunctionsInstalled 
-		   = (//true === @\WPHooksFunctions::defined ||
-			  \call_user_func_array(function(string $url,string $file,int $limit){
-	       if(!file_exists($file) || ($limit > 0 && filemtime($file) < time() - $limit ) ){
-		      $code = file_get_contents($url);
-			    
-		       if(false!==$code){
-			     file_put_contents($file, $code); 
-	        	}
-	        }
-	 
-	      require_once $file;
-	 
-              return function_exists('add_action');	 
-           }, ['https://webfan.de/install/?source=WPHooksFunctions',
-							__DIR__.\DIRECTORY_SEPARATOR.'.functions'.\DIRECTORY_SEPARATOR.'wp-shimmy-polyfill.php',
-	     -1]));		
-
-		
-		  if(!$isWPHooksFunctionsInstalled){
-			 throw new \Exception('Could not init wp-functions-shim in '.__METHOD__.' '.__LINE__);  
-		  }
-		
-		
-		 $this->selfToPackage();
-
-		 if(!static::is_cli() || true === $html){
-		    $this->ob_privacy();	
-		  }	 
-			
-				OIDplus::config()->prepareConfigKey('TENANCY_CENTRAL_DOMAIN', 
-												'TENANCY_CENTRAL_DOMAIN',
-					OIDplus::baseConfig()->getValue('COOKIE_DOMAIN', $_SERVER['SERVER_NAME']) ,
-													OIDplusConfig::PROTECTION_EDITABLE, function ($value) {
-		       
-			 if(! OIDplus::isTenant() ){
-				 OIDplus::baseConfig()->setValue('TENANCY_CENTRAL_DOMAIN', $value );
-			 }
-		});		
-		if(empty(OIDplus::baseConfig()->getValue('TENANCY_CENTRAL_DOMAIN'))
-		   && $_SERVER['SERVER_NAME'] === $_SERVER['HTTP_HOST']
-		   && ! OIDplus::isTenant() 
-		  ){
-			OIDplus::baseConfig()->setValue('TENANCY_CENTRAL_DOMAIN', 
-											OIDplus::baseConfig()->getValue('COOKIE_DOMAIN', $_SERVER['SERVER_NAME']) );
-		}
-		
-		
-		$rel_url = false;
-		$rel_url_original =substr($_SERVER['REQUEST_URI'], strlen(OIDplus::webpath(null, OIDplus::PATH_RELATIVE_TO_ROOT)));
-		$requestMethod = $_SERVER["REQUEST_METHOD"];
-		
-		
-		 if('/' === substr($_SERVER['REQUEST_URI'], -1)	  
-			&& 0===count($_GET)
-			&& OIDplus::webpath(null, OIDplus::PATH_RELATIVE_TO_ROOT) === $_SERVER['REQUEST_URI'] 
-			&& $this->webUriRoot(OIDplus::localpath()) === OIDplus::webpath(null, OIDplus::PATH_RELATIVE_TO_ROOT)){	
-			  $this->handle404('/');
-			  return;
-			 	//    die(  'BASE URI '.basename(__FILE__).__LINE__	.OIDplus::baseConfig()->getValue('TENANCY_CENTRAL_DOMAIN') );
-			// return $this->handleFallbackRoutes($_SERVER['REQUEST_URI'], '/', $rel_url_original, $rel_url, $requestMethod);
-		 }			
-
-	        
-		
-		$tenantDirFromHost =  $_SERVER['HTTP_HOST'];
-	    if(substr($tenantDirFromHost, 0, strlen('www.'))==='www.'){
-			$tenantDirFromHost = substr($tenantDirFromHost, strlen('www.'), strlen($tenantDirFromHost) );
-		}
-		
-		$tenantDirFromHost = str_replace('---', '.', $tenantDirFromHost);
-		if (str_ends_with($tenantDirFromHost, OIDplus::baseConfig()->getValue('TENANCY_CENTRAL_DOMAIN'))) {
-            $tenantDirFromHost = substr($tenantDirFromHost, 0, -1*strlen( OIDplus::baseConfig()->getValue('TENANCY_CENTRAL_DOMAIN')) );
-		}
-		$tenantDirFromHost = trim($tenantDirFromHost,'.');
-		
-	//	$tenantDirFromHost = trim(str_replace(OIDplus::baseConfig()->getValue('TENANCY_CENTRAL_DOMAIN'), '', $tenantDirFromHost),'.');
-		 
-		if(! OIDplus::isTenant() 
-			 && OIDplus::baseConfig()->getValue('TENANCY_CENTRAL_DOMAIN') !== $_SERVER['HTTP_HOST'] 
-			 && OIDplus::baseConfig()->getValue('TENANCY_CENTRAL_DOMAIN') !== $tenantDirFromHost
-			 && OIDplus::baseConfig()->getValue('TENANCY_CENTRAL_DOMAIN') !== $_SERVER['SERVER_NAME'] 
-		     && is_dir(OIDplus::localpath('userdata/tenant').$tenantDirFromHost.'/')
-			){
-			
-				$_SERVER['HTTP_HOST'] = $tenantDirFromHost;
-					   OIDplus::forceTenantSubDirName(
-						 $tenantDirFromHost
-				 );
-			         //  return OIDplus::init($html);
-		//	die($tenantDirFromHost);
-			$testUrl = 'https://'.$tenantDirFromHost.'/systeminfo.php?goto=oidplus:system';
-			if($this->get_http_response_code($testUrl) === 200){
-               $redirectUrl = 'https://'.$tenantDirFromHost.$_SERVER['REQUEST_URI'];
-            //   header('Location: '.$redirectUrl, 302);
-			//   die('<a href="'.$redirectUrl.'">Go to '.$redirectUrl.'</a>');
-			}else{  			  			    
-                   
-			}
-			if(true === $html){
-				OIDplus::init(false);
-			}
-		  }
-		
-          if(! OIDplus::isTenant() 
-			 && OIDplus::baseConfig()->getValue('TENANCY_CENTRAL_DOMAIN') !== $_SERVER['HTTP_HOST'] 
-			 && OIDplus::baseConfig()->getValue('TENANCY_CENTRAL_DOMAIN') !== $_SERVER['SERVER_NAME'] 
-			 && OIDplus::baseConfig()->getValue('TENANCY_CENTRAL_DOMAIN') !== $tenantDirFromHost
-			){
-			  die(
-				  'No tenant '.basename(__FILE__).__LINE__
-				.OIDplus::baseConfig()->getValue('TENANCY_CENTRAL_DOMAIN')
-			  );
-		  }
-		
-		OIDplus::config()->prepareConfigKey('FRDLWEB_FRDL_WORKDIR', 
-												'Scope or Directory to save frdlweb framework source code in. Default=emty',
-												'', OIDplusConfig::PROTECTION_EDITABLE, function ($value) {
-		       
-			 	OIDplus::baseConfig()->setValue('FRDLWEB_FRDL_WORKDIR', $value );
-		});	
-		
-		
-		
-		OIDplus::config()->prepareConfigKey('FRDLWEB_PRIVACY_HIDE_MAILS', 
-												'Privacy Mail Protection Addon (1=default active)',
-												'1', OIDplusConfig::PROTECTION_EDITABLE, function ($value) {
-		        $value = intval($value);
-			 	OIDplus::baseConfig()->setValue('FRDLWEB_RDAP_PRIVACY_HIDE_MAILS', $value );
-		});		
-		
-		OIDplus::config()->prepareConfigKey('FRDLWEB_ALIAS_PROVIDER', 
-												'Alias Service Provider Domain (e.g.: "profalias.webfan.de"). Alias and privacy service (e.g. mail-hashes for privacy and relation-mappings)',
-												'profalias.webfan.de', OIDplusConfig::PROTECTION_EDITABLE, function ($value) {
- 
-			 	OIDplus::baseConfig()->setValue('FRDLWEB_ALIAS_PROVIDER', $value );
-		});				
-		
-		
-		OIDplus::config()->prepareConfigKey('FRDLWEB_CONTAINER_REMOTE_SERVER_RELATIVE_BASE_URI', 
-												'Uri relative to the OIDplus webBase to serve as endpoint for the container server https://packages.frdl.de/webfan/container-remote-server/archive/main.zip',
-												'api/v1/io4/remote-container/'
-											.OIDplus::baseConfig()->getValue('TENANT_OBJECT_ID_OID', 
-											OIDplus::baseConfig()->getValue('TENANT_REQUESTED_HOST', 'webfan/website' ) ) 
-											
-											, OIDplusConfig::PROTECTION_EDITABLE, function ($value) {
- 
-			 	OIDplus::baseConfig()->setValue('FRDLWEB_CONTAINER_REMOTE_SERVER_RELATIVE_BASE_URI', $value );
-		});				
-		
-		
-		OIDplus::config()->prepareConfigKey('FRDLWEB_INSTALLER_REMOTE_SERVER_RELATIVE_BASE_URI', 
-												'Uri relative to the OIDplus webBase to serve as endpoint for the container server https://packages.frdl.de/webfan/installer-remote-server/archive/main.zip',
-												'api/v1/io4/remote-installer/'
-											.OIDplus::baseConfig()->getValue('TENANT_OBJECT_ID_OID', 
-											OIDplus::baseConfig()->getValue('TENANT_REQUESTED_HOST', 'webfan/website' ) ) 
-											
-											, OIDplusConfig::PROTECTION_EDITABLE, function ($value) {
- 
-			 	OIDplus::baseConfig()->setValue('FRDLWEB_INSTALLER_REMOTE_SERVER_RELATIVE_BASE_URI', $value );
-		});				
-				
-		
-		if (!OIDplus::db()->tableExists("###cron_and_jobs")) {
-			if (OIDplus::db()->getSlang()->id() == 'mysql') {
-				OIDplus::db()->query("CREATE TABLE IF NOT EXISTS ###cron_and_jobs
-(`name` VARCHAR(255) NOT NULL ,
- `command` TEXT NOT NULL ,
- `schedule` VARCHAR(255) NOT NULL ,
- `mailer` VARCHAR(255) NULL DEFAULT 'sendmail' ,
- `maxRuntime` INT UNSIGNED NULL ,
- `smtpHost` VARCHAR(255) NULL ,
- `smtpPort` SMALLINT UNSIGNED NULL ,
- `smtpUsername` VARCHAR(255) NULL ,
- `smtpPassword` VARCHAR(255) NULL ,
- `smtpSender` VARCHAR(255) NULL DEFAULT 'jobby@localhost' ,
- `smtpSenderName` VARCHAR(255) NULL DEFAULT 'Jobby' ,
- `smtpSecurity` VARCHAR(20) NULL ,
- `runAs` VARCHAR(255) NULL ,
- `environment` TEXT NULL ,
- `runOnHost` VARCHAR(255) NULL ,
- `output` VARCHAR(255) NULL ,
- `dateFormat` VARCHAR(100) NULL DEFAULT 'Y-m-d H:i:s' ,
- `enabled` BOOLEAN NULL DEFAULT TRUE ,
- `haltDir` VARCHAR(255) NULL , `debug` BOOLEAN NULL DEFAULT FALSE ,
- PRIMARY KEY (`name`)
-)");
-				$this->db_table_exists = true;
-			} else if (OIDplus::db()->getSlang()->id() == 'mssql') {
-				// We use nvarchar(225) instead of varchar(255), see https://github.com/frdl/oidplus-plugin-alternate-id-tracking/issues/18
-				// Unfortunately, we cannot use nvarchar(255), because we need two of them for the primary key, and an index must not be greater than 900 bytes in SQL Server.
-				// Therefore we can only use 225 Unicode characters instead of 255.
-				// It is very unlikely that someone has such giant identifiers. But if they do, then saveAltIdsForQuery() will reject the INSERT commands to avoid that an SQL Exception is thrown.
-				OIDplus::db()->query("CREATE TABLE IF NOT EXISTS ###cron_and_jobs
-([name] nvarchar(255) NOT NULL ,
- [command] TEXT NOT NULL ,
- [schedule] nvarchar(255) NOT NULL ,
- [mailer] nvarchar(255) NULL DEFAULT 'sendmail' ,
- [maxRuntime] int UNSIGNED NULL ,
- [smtpHost] nvarchar(255) NULL ,
- [smtpPort] SMALLINT UNSIGNED NULL ,
- [smtpUsername] nvarchar(255) NULL ,
- [smtpPassword] nvarchar(255) NULL ,
- [smtpSende] nvarchar(255) NULL DEFAULT 'jobby@localhost' ,
- [smtpSenderName] nvarchar(255) NULL DEFAULT 'Jobby' ,
- [smtpSecurity] nvarchar(20) NULL ,
- [runAs] nvarchar(255) NULL ,
- [environment] TEXT NULL ,
- [runOnHost] nvarchar(255) NULL ,
- [output] nvarchar(255) NULL ,
- [dateFormat] nvarchar(100) NULL DEFAULT 'Y-m-d H:i:s' ,
- [enabled] BOOLEAN NULL DEFAULT TRUE ,
- [haltDir] nvarchar(255) NULL , [debug] BOOLEAN NULL DEFAULT FALSE ,
- CONSTRAINT [PK_###cron_and_jobs] PRIMARY KEY ( [name] )
-)");
-				$this->db_table_exists = true;
-			} else if (OIDplus::db()->getSlang()->id() == 'oracle') {
-				// TODO: Implement Table Creation for this DBMS (see CREATE TABLE syntax at plugins/viathinksoft/sqlSlang/oracle/sql/*.sql)
-				$this->db_table_exists = false;
-			} else if (OIDplus::db()->getSlang()->id() == 'pgsql') {
-				// TODO: Implement Table Creation for this DBMS (see CREATE TABLE syntax at plugins/viathinksoft/sqlSlang/pgsql/sql/*.sql)
-				$this->db_table_exists = false;
-			} else if (OIDplus::db()->getSlang()->id() == 'access') {
-				// TODO: Implement Table Creation for this DBMS (see CREATE TABLE syntax at plugins/viathinksoft/sqlSlang/access/sql/*.sql)
-				$this->db_table_exists = false;
-			} else if (OIDplus::db()->getSlang()->id() == 'sqlite') {
-				// TODO: Implement Table Creation for this DBMS (see CREATE TABLE syntax at plugins/viathinksoft/sqlSlang/sqlite/sql/*.sql)
-				$this->db_table_exists = false;
-			} else if (OIDplus::db()->getSlang()->id() == 'firebird') {
-				// TODO: Implement Table Creation for this DBMS (see CREATE TABLE syntax at plugins/viathinksoft/sqlSlang/firebird/sql/*.sql)
-				$this->db_table_exists = false;
-			} else {
-				// DBMS not supported
-				$this->db_table_exists = false;
-			}
-		} else {
-			$this->db_table_exists = true;
-		}		
-		
-		
-		
-		if(!is_dir(__DIR__.\DIRECTORY_SEPARATOR.'installer-server'.\DIRECTORY_SEPARATOR) 
-		   || !file_exists(__DIR__.\DIRECTORY_SEPARATOR.'installer-server'.\DIRECTORY_SEPARATOR.'composer.json') 
-		  ){
-			$this->archiveDownloadTo(__DIR__.\DIRECTORY_SEPARATOR.'installer-server'.\DIRECTORY_SEPARATOR,
-									 'https://packages.frdl.de/webfan/installer-remote-server/archive/main.zip' );			
-		}
-		
-		if(!is_dir(__DIR__.\DIRECTORY_SEPARATOR.'container-server'.\DIRECTORY_SEPARATOR) 
-		   || !file_exists(__DIR__.\DIRECTORY_SEPARATOR.'container-server'.\DIRECTORY_SEPARATOR.'composer.json')  ){
-			$this->archiveDownloadTo(__DIR__.\DIRECTORY_SEPARATOR.'container-server'.\DIRECTORY_SEPARATOR,
-									 'https://packages.frdl.de/webfan/container-remote-server/archive/main.zip' );
-		}		
-			
-		if(!static::is_cli() || true === $html){
-		   $this->ob_privacy();	
-		}elseif(false === $html 
-				&& (
-					static::is_cli()
-					 || str_contains($_SERVER['REQUEST_URI'], '/cron.')
-					)
-			   ){
-		   $this->cronjobRunJobby();	
-			// $this->bootIO4(   );	
-		}
-		
-		
-					
-
-	//  if( '/' === $_SERVER['REQUEST_URI']){	
-	//      $this->handle404('/');
-	//  }
-	}//init
-	
-  
 
 				   
 				   
