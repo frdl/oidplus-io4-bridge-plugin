@@ -50,7 +50,7 @@ $StubRunner = (new \IO4\Webfat)->getWebfat($webfatFile,
 
 
  $plugin_root = __DIR__;
- $traitFile = "{$plugin_root}/classes/Webfan/Webfat/getWebfatTrait.php";
+ $traitFile = "{$plugin_root}/.classes/Webfan/Webfat/getWebfatTrait.php";
 
  if (!file_exists($traitFile) || filemtime($traitFile)<30*24*60*60) {
 	// check if composer dependencies are distributed with the plugin
