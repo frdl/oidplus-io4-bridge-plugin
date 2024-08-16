@@ -686,7 +686,7 @@ ORDER BY (data_length + index_length) DESC";
 	public static function parse_mail_addresses($string){
 		
 		 if(function_exists('\frdl_parse_mail_addresses')){	 
-			 return frdl_parse_mail_addresses($string);
+			 return \frdl_parse_mail_addresses($string);
 		 }
 		
        preg_match_all(<<<REGEXP
