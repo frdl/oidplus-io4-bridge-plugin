@@ -955,21 +955,27 @@ REGEXP, $string, $matches, \PREG_PATTERN_ORDER);
 	}
 		
 
+    public static function objectCMSPage(OIDplusObject $obj, ?bool $verbose = false, ?bool $die = false){
+		$page  = frdl_ini_dot_parse($obj->getDescription(), true);
+		$data = $page['data']; 
+		$html = $page['content']; 
+		$html = \do_shortcode($html );
+		$page['html'] = $html;
+		if(true === $verbose){
+			echo $html;
+		}
+		if(true === $die){
+			die();
+		}
+		return $page;
+	}
+				   
 	public function handleFallbackRoutes($REQUEST_URI, $request, $rel_url_original, $rel_url, $requestMethod){
 		$html = '';
 		
 	
 		    	if ($obj = OIDplusObject::findFitting('uri:'.$request)) {
-					//print_r($obj);
-				///	ob_start();
-					$page  = frdl_ini_dot_parse($obj->getDescription(), true);
-					$data = $page['data']; 
-					$html = $page['content']; 
-					$html = \do_shortcode($html );
-				//	ob_end_clean();
-					// print_r($html);
-					// print_r($data);
-			      die($html);
+					static::objectCMSPage($obj, true, true);
 				}
 		/*	*/
 		
