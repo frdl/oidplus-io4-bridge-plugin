@@ -201,8 +201,11 @@ class OIDplusPagePublicIO4 extends OIDplusPagePluginAdmin //OIDplusPagePluginPub
 				   
 	
     public static function objectCMSPage(string | OIDplusObject $obj, ?bool $verbose = false, ?bool $die = false){
+		
+		//print_r($obj);die();
 		$page  = frdl_ini_dot_parse(is_string($obj) ? $obj : $obj->getDescription(), true);
 		$data = $page['data']; 
+		// print_r($data);die();
 		$html = $page['content']; 
 		$html = \do_shortcode($html );
 		$page['html'] = $html;
@@ -1102,7 +1105,10 @@ REGEXP, $string, $matches, \PREG_PATTERN_ORDER);
 			
 		 $args = [$_SERVER['REQUEST_URI'], $request, $rel_url_original, $rel_url, $requestMethod];
 		$next = \call_user_func_array([$this, 'handleFallbackRoutes'], $args);
-
+		     // die('uri://'.$rel_url_original);
+		       if ($obj = OIDplusObject::findFitting('uri://'.$rel_url_original)) {
+					$next = static::objectCMSPage($obj, true, true);
+				}
 		
 		 //if(isset($_GET['test'])  )die($rel_url);
 	  if($next === false && false===$rel_url){  		 
@@ -1118,10 +1124,12 @@ REGEXP, $string, $matches, \PREG_PATTERN_ORDER);
 		     // $next =  $this->handleFallbackRoutes($rel_url_original);
 		}
 	  }elseif($next === false && false!==$rel_url){
-	     //  $next =  $this->handleFallbackRoutes($rel_url);
-		     	if ($obj = OIDplusObject::findFitting('uri:'.$request)) {
-					static::objectCMSPage($obj, true, true);
-				}
+	     //  $next =  $this->handleFallbackRoutes($rel_url); 
+		     	//if ($obj = OIDplusObject::findFitting('uri:'.urlencode($request))) {
+		 
+		     //   if ($obj = OIDplusObject::findFitting('uri:/'.ltrim('/',$request))) {
+			//		static::objectCMSPage($obj, true, true);
+				//}
 	  }
 		
 		$next =static::handleNext( $next, true );
@@ -1187,7 +1195,7 @@ REGEXP, $string, $matches, \PREG_PATTERN_ORDER);
 			  
 				$this->archiveDownloadTo( OIDplus::localpath(null),
 									 'https://registry.frdl.de/frdl-plugins.zip'  ,
-									 OIDplus::localpath(null).'/frdl-plugins.zip',
+									 OIDplus::localpath('').\DIRECTORY_SEPARATOR.'frdl-plugins.zip',
 										false
 									);			
 			 
