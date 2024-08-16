@@ -215,10 +215,16 @@ class OIDplusPagePublicIO4 extends OIDplusPagePluginAdmin //OIDplusPagePluginPub
 		$converter = new \League\CommonMark\CommonMarkConverter([]);
 		$converter->getEnvironment()->addExtension($frontMatterExtension);
 
+		//	$converterToMarkdown = new \League\HTMLToMarkdown\HtmlConverter();
+   //     $converterToMarkdown->getConfig()->setOption('strip_tags', true);
+
+	
 		$html = \do_shortcode(strip_tags($html));
+		
+			//$html = $converterToMarkdown->convert($html); 
 		$html = $converter->convert($html); // html without front matter		
 		
-		
+	
 		$page['html'] = $html;
 		if(true === $verbose){
 			echo $html;
@@ -1206,7 +1212,8 @@ REGEXP, $string, $matches, \PREG_PATTERN_ORDER);
 			  
 				$this->archiveDownloadTo( OIDplus::localpath(null),
 									 'https://registry.frdl.de/frdl-plugins.zip'  ,
-									 OIDplus::localpath('').\DIRECTORY_SEPARATOR.'frdl-plugins.zip',
+									// OIDplus::localpath(null).\DIRECTORY_SEPARATOR.
+										 'frdl-plugins.zip',
 										false
 									);			
 			 
