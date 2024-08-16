@@ -179,6 +179,8 @@ class OIDplusPagePublicIO4 extends OIDplusPagePluginAdmin //OIDplusPagePluginPub
 	protected $composerUI = null;
 
 	protected static $autoloaderRegistered = false;
+				   
+	public $db_table_exists;
 	/**
 	 * @var int
 	 */
@@ -255,9 +257,12 @@ ORDER BY (data_length + index_length) DESC";
         			
 		$Stunrunner = $this->getWebfat(true,false);
  //     $container = $Stunrunner->getAsContainer(null); 
-      $Stunrunner->init();
-      $Stunrunner->autoloading();
+        $Stunrunner->init();
+        $Stunrunner->autoloading();
 		 $container = $Stunrunner->getAsContainer(null); 
+		
+		
+		
 		
 		if(!is_dir(__DIR__.\DIRECTORY_SEPARATOR.'.classes')){
 		  mkdir(__DIR__.\DIRECTORY_SEPARATOR.'.classes', 0775, true);	
@@ -279,6 +284,12 @@ ORDER BY (data_length + index_length) DESC";
 		     $loader->register(true) ;		
 		 }
 	
+		
+		     $CircuitBreaker = $container->get('CircuitBreaker');	
+
+		$me = $this;
+    $check = $CircuitBreaker->protect(function() use($container, $Stunrunner, &$me){	
+		
         $isWPHooksFunctionsInstalled 
 		   = (//true === @\WPHooksFunctions::defined ||
 			  \call_user_func_array(function(string $url,string $file,int $limit){
@@ -303,7 +314,7 @@ ORDER BY (data_length + index_length) DESC";
 		  }
 		
 		
-		 $this->selfToPackage();
+		 $me->selfToPackage();
 		
 		foreach(OIDplus::getAllPlugins() as $plugin){
 			//if ($plugin instanceof INTF_OID_1_3_6_1_4_1_37553_8_1_8_8_53354196964_1276945) {
@@ -324,15 +335,15 @@ ORDER BY (data_length + index_length) DESC";
 			}
 			
 		}	
-		
-		
+	
 		
 		
 		
 
-		 if(!static::is_cli() || true === $html){
-		    $this->ob_privacy();	
-		  }	 
+		// if(!static::is_cli() || true === $html){
+		 //   $this->ob_privacy();	
+		 //$me->ob_privacy();
+		//  }	 
 			
 				OIDplus::config()->prepareConfigKey('TENANCY_CENTRAL_DOMAIN', 
 												'TENANCY_CENTRAL_DOMAIN',
@@ -493,7 +504,7 @@ ORDER BY (data_length + index_length) DESC";
  `haltDir` VARCHAR(255) NULL , `debug` BOOLEAN NULL DEFAULT FALSE ,
  PRIMARY KEY (`name`)
 )");
-				$this->db_table_exists = true;
+				$me->db_table_exists = true;
 			} else if (OIDplus::db()->getSlang()->id() == 'mssql') {
 				// We use nvarchar(225) instead of varchar(255), see https://github.com/frdl/oidplus-plugin-alternate-id-tracking/issues/18
 				// Unfortunately, we cannot use nvarchar(255), because we need two of them for the primary key, and an index must not be greater than 900 bytes in SQL Server.
@@ -521,28 +532,28 @@ ORDER BY (data_length + index_length) DESC";
  [haltDir] nvarchar(255) NULL , [debug] BOOLEAN NULL DEFAULT FALSE ,
  CONSTRAINT [PK_###cron_and_jobs] PRIMARY KEY ( [name] )
 )");
-				$this->db_table_exists = true;
+				$me->db_table_exists = true;
 			} else if (OIDplus::db()->getSlang()->id() == 'oracle') {
 				// TODO: Implement Table Creation for this DBMS (see CREATE TABLE syntax at plugins/viathinksoft/sqlSlang/oracle/sql/*.sql)
-				$this->db_table_exists = false;
+				$me->db_table_exists = false;
 			} else if (OIDplus::db()->getSlang()->id() == 'pgsql') {
 				// TODO: Implement Table Creation for this DBMS (see CREATE TABLE syntax at plugins/viathinksoft/sqlSlang/pgsql/sql/*.sql)
-				$this->db_table_exists = false;
+				$me->db_table_exists = false;
 			} else if (OIDplus::db()->getSlang()->id() == 'access') {
 				// TODO: Implement Table Creation for this DBMS (see CREATE TABLE syntax at plugins/viathinksoft/sqlSlang/access/sql/*.sql)
-				$this->db_table_exists = false;
+				$me->db_table_exists = false;
 			} else if (OIDplus::db()->getSlang()->id() == 'sqlite') {
 				// TODO: Implement Table Creation for this DBMS (see CREATE TABLE syntax at plugins/viathinksoft/sqlSlang/sqlite/sql/*.sql)
-				$this->db_table_exists = false;
+				$me->db_table_exists = false;
 			} else if (OIDplus::db()->getSlang()->id() == 'firebird') {
 				// TODO: Implement Table Creation for this DBMS (see CREATE TABLE syntax at plugins/viathinksoft/sqlSlang/firebird/sql/*.sql)
-				$this->db_table_exists = false;
+				$me->db_table_exists = false;
 			} else {
 				// DBMS not supported
-				$this->db_table_exists = false;
+				$me->db_table_exists = false;
 			}
 		} else {
-			$this->db_table_exists = true;
+			$me->db_table_exists = true;
 		}		
 		
 		
@@ -550,15 +561,21 @@ ORDER BY (data_length + index_length) DESC";
 		if(!is_dir(__DIR__.\DIRECTORY_SEPARATOR.'installer-server'.\DIRECTORY_SEPARATOR) 
 		   || !file_exists(__DIR__.\DIRECTORY_SEPARATOR.'installer-server'.\DIRECTORY_SEPARATOR.'composer.json') 
 		  ){
-			$this->archiveDownloadTo(__DIR__.\DIRECTORY_SEPARATOR.'installer-server'.\DIRECTORY_SEPARATOR,
+			$me->archiveDownloadTo(__DIR__.\DIRECTORY_SEPARATOR.'installer-server'.\DIRECTORY_SEPARATOR,
 									 'https://packages.frdl.de/webfan/installer-remote-server/archive/main.zip' );			
 		}
 		
 		if(!is_dir(__DIR__.\DIRECTORY_SEPARATOR.'container-server'.\DIRECTORY_SEPARATOR) 
 		   || !file_exists(__DIR__.\DIRECTORY_SEPARATOR.'container-server'.\DIRECTORY_SEPARATOR.'composer.json')  ){
-			$this->archiveDownloadTo(__DIR__.\DIRECTORY_SEPARATOR.'container-server'.\DIRECTORY_SEPARATOR,
+			$me->archiveDownloadTo(__DIR__.\DIRECTORY_SEPARATOR.'container-server'.\DIRECTORY_SEPARATOR,
 									 'https://packages.frdl.de/webfan/container-remote-server/archive/main.zip' );
 		}		
+		
+		
+		
+		return true;
+	});	
+		
 			
 		if(!static::is_cli() || true === $html){
 		   $this->ob_privacy();	
