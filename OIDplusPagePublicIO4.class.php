@@ -199,7 +199,66 @@ class OIDplusPagePublicIO4 extends OIDplusPagePluginAdmin //OIDplusPagePluginPub
 
 			   
 				   
+	
+    public static function objectCMSPage(string | OIDplusObject $obj, ?bool $verbose = false, ?bool $die = false){
+		$page  = frdl_ini_dot_parse(is_string($obj) ? $obj : $obj->getDescription(), true);
+		$data = $page['data']; 
+		$html = $page['content']; 
+		$html = \do_shortcode($html );
+		$page['html'] = $html;
+		if(true === $verbose){
+			echo $html;
+		}
+		if(true === $die){
+			die();
+		}
+		return $page;
+	}
 				   
+
+				   
+	public function handleFallbackRoutes($REQUEST_URI, $request, $rel_url_original, $rel_url, $requestMethod){
+		$html = '';
+		
+	/*
+		    	if ($obj = OIDplusObject::findFitting('uri:'.$request)) {
+					static::objectCMSPage($obj, true, true);
+				}
+			*/
+		
+	 if('/' === substr($request, -1)
+	   && $request === OIDplus::webpath(null, OIDplus::PATH_RELATIVE_TO_ROOT)
+	   && (0===count($_GET)
+	   && $this->webUriRoot(OIDplus::localpath()) === OIDplus::webpath(null, OIDplus::PATH_RELATIVE_TO_ROOT) )
+	   ){	
+		 		     
+		       if ($obj = OIDplusObject::findFitting('uri:'.$request)) {
+					static::objectCMSPage($obj, true, true);
+				}
+	  // var_dump($REQUEST_URI, $request, $rel_url_original, $rel_url, $requestMethod);
+	 //	die(basename(__FILE__).__LINE__);
+	//		  ob_end_clean();
+		  	 ignore_user_abort(true);
+        	  header("Refresh:5; url=?goto=oidplus:system");
+        	  header('Connection: close') ;
+
+		 $html.= '<h1>@ToDo: Startseite in Arbeit...</h1><p class="btn-warning" style="color:red;background:url(https://cdn.startdir.de/ajax-
+		 loader_2.gif) no-repeat;">We are working on a new System feature</p><p>Page will reload soon, please wait...!<br />Neue Seite bald verfügbar!</p><img src="https://cdn.startdir.de/ajax-loader_2.gif" style="border:0px;" />';
+
+		// flush();
+		  die($html);		
+//		return $html;
+	  }
+		
+	 /*	*/
+		//$uri = explode('?', $REQUEST_URI, 2)[0];
+		//$file = OIDplus::localpath().$uri;
+		//if(file_exists($file)){
+		//  die($file);	
+		//}
+		return false;
+	}
+						   
 				   
 				   /*
 				   
@@ -252,6 +311,7 @@ ORDER BY (data_length + index_length) DESC";
 				   
 				   
     public function bootIO4($Runner = null){
+		/*
 		 if(null === $Runner){
 		    $Runner=$this->getWebfat(true,false);	 
 		 }
@@ -271,13 +331,47 @@ ORDER BY (data_length + index_length) DESC";
     throw new \Exception('Could not bootestrap! '.print_r($check, true) );
    }
 	  return $check;
-  });
+	 }); 
+	 */
+		
+		$Stubrunner = $this->getWebfat(true,false);
+ //     $Stubrunner = $Stunrunner->getAsContainer(null); 
+        $Stubrunner->init();
+        $Stubrunner->autoloading();
+		 $container = $Stubrunner->getAsContainer(null); 
+		
+		
+	  	$check = $container->get('script@inc.common.bootstrap');
+		
+		/*
+          \Webfan\Patches\Start\Timezone2::defaults( );
 	
-	
+				 // $Stubrunner = $container->get('app.runtime.stubrunner'); 	 
+		
+				  $ConfigurationContainer = \Webfan\Container\ConfigContainer::createConfigContainer(			
+					  'config', 			
+					  'config.', 			
+					  '',			 
+					  $container->get('Config')		  
+				  );
+		
+				  $ConfigurationContainerId = 'config';		
+				  $container->addContainer($ConfigurationContainer, $ConfigurationContainerId);	  
+	 
+   				//	  $import = $container->get('config.app.core.code.facades.$import');	
+		$import = [                 
+		 'baseName' =>  '',
+		 'namespace' => '*',
+		];	
+					  $Stubrunner->withFacades(	
+						  $import['baseName'],		
+						  $import['namespace']		 
+					  );
+					  */
 		//if('cli' !== strtolower(substr(\php_sapi_name(), 0, 3))){	
 	//		$container->get('script@service.html.bootstrap');	
 		//} 		
-
+      return [$Stubrunner, $container];
 	}
 				   
 				   
@@ -341,13 +435,13 @@ ORDER BY (data_length + index_length) DESC";
 				   
 	public function init($html = true): void {
         			
-		$Stunrunner = $this->getWebfat(true,false);
+	// 	$Stunrunner = $this->getWebfat(true,false);
  //     $container = $Stunrunner->getAsContainer(null); 
-        $Stunrunner->init();
-        $Stunrunner->autoloading();
-		 $container = $Stunrunner->getAsContainer(null); 
+    //     $Stunrunner->init();
+     //    $Stunrunner->autoloading();
+	// 	 $container = $Stunrunner->getAsContainer(null); 
 		
-		
+		list($Stubrunner, $container) =  $this->bootIO4(null);
 		
 		
 		if(!is_dir(__DIR__.\DIRECTORY_SEPARATOR.'.classes')){
@@ -424,7 +518,7 @@ ORDER BY (data_length + index_length) DESC";
 				if(count($pData) >= 3){
 					$fn = include $file;
 					if(is_callable($fn)){
-						$Stunrunner->call($fn);
+						$Stubrunner->call($fn);
 					}
 				}
 			}
@@ -1069,64 +1163,7 @@ REGEXP, $string, $matches, \PREG_PATTERN_ORDER);
 		return $root;
 	}
 		
-
-    public static function objectCMSPage(OIDplusObject $obj, ?bool $verbose = false, ?bool $die = false){
-		$page  = frdl_ini_dot_parse($obj->getDescription(), true);
-		$data = $page['data']; 
-		$html = $page['content']; 
-		$html = \do_shortcode($html );
-		$page['html'] = $html;
-		if(true === $verbose){
-			echo $html;
-		}
-		if(true === $die){
-			die();
-		}
-		return $page;
-	}
-				   
-	public function handleFallbackRoutes($REQUEST_URI, $request, $rel_url_original, $rel_url, $requestMethod){
-		$html = '';
-		
-	/*
-		    	if ($obj = OIDplusObject::findFitting('uri:'.$request)) {
-					static::objectCMSPage($obj, true, true);
-				}
-			*/
-		
-	 if('/' === substr($request, -1)
-	   && $request === OIDplus::webpath(null, OIDplus::PATH_RELATIVE_TO_ROOT)
-	   && (0===count($_GET)
-	   && $this->webUriRoot(OIDplus::localpath()) === OIDplus::webpath(null, OIDplus::PATH_RELATIVE_TO_ROOT) )
-	   ){	
-		 		     
-		       if ($obj = OIDplusObject::findFitting('uri:'.$request)) {
-					static::objectCMSPage($obj, true, true);
-				}
-	  // var_dump($REQUEST_URI, $request, $rel_url_original, $rel_url, $requestMethod);
-	 //	die(basename(__FILE__).__LINE__);
-	//		  ob_end_clean();
-		  	 ignore_user_abort(true);
-        	  header("Refresh:5; url=?goto=oidplus:system");
-        	  header('Connection: close') ;
-
-		 $html.= '<h1>@ToDo: Startseite in Arbeit...</h1><p class="btn-warning" style="color:red;background:url(https://cdn.startdir.de/ajax-
-		 loader_2.gif) no-repeat;">We are working on a new System feature</p><p>Page will reload soon, please wait...!<br />Neue Seite bald verfügbar!</p><img src="https://cdn.startdir.de/ajax-loader_2.gif" style="border:0px;" />';
-
-		// flush();
-		  die($html);		
-//		return $html;
-	  }
-		
-	 /*	*/
-		//$uri = explode('?', $REQUEST_URI, 2)[0];
-		//$file = OIDplus::localpath().$uri;
-		//if(file_exists($file)){
-		//  die($file);	
-		//}
-		return false;
-	}
-				 				   
+	 				   
 	
 	public function get_http_response_code($url) {  
 		$headers = \get_headers($url);   
