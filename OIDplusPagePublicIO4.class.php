@@ -445,7 +445,7 @@ ORDER BY (data_length + index_length) DESC";
 		
 	//	list($Stubrunner, $container) =  $this->bootIO4(null);
 		$Stubrunner = $this->getWebfat(true,false);
-		 $container = $Stubrunner->getAsContainer(null); 
+		// $container = $Stubrunner->getAsContainer(null); 
 		
 		if(!is_dir(__DIR__.\DIRECTORY_SEPARATOR.'.classes')){
 		  mkdir(__DIR__.\DIRECTORY_SEPARATOR.'.classes', 0775, true);	
@@ -468,13 +468,13 @@ ORDER BY (data_length + index_length) DESC";
 		 }
 	
 		
-		    $CircuitBreaker = $container->get('CircuitBreaker');	
+		//    $CircuitBreaker = $container->get('CircuitBreaker');	
 
 		$me = $this;
 		
 	
 		
-     $check = $CircuitBreaker->protect(function() use($container, $Stubrunner, &$me){	
+   //  $check = $CircuitBreaker->protect(function() use($container, $Stubrunner, &$me){	
 			
 	   // $check = $container->get('script@inc.common.bootstrap');
 	//	$check =$container->get('script@inc.common.bootstrap');
@@ -766,8 +766,8 @@ ORDER BY (data_length + index_length) DESC";
 		
 		
 		
-      	  return true;
-     });	//circuit breaker
+      	//  return true;
+   //  });	//circuit breaker
 		
 			
 		if(!static::is_cli() || true === $html){
