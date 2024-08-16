@@ -333,15 +333,16 @@ ORDER BY (data_length + index_length) DESC";
 	  return $check;
 	 }); 
 	 */
-		
-		$Stubrunner = $this->getWebfat(true,false);
+		$me = $this;
+	 return  \frdl\booting\once(function()use($me){	
+		$Stubrunner = $me->getWebfat(true,false);
  //     $Stubrunner = $Stunrunner->getAsContainer(null); 
         $Stubrunner->init();
         $Stubrunner->autoloading();
 		 $container = $Stubrunner->getAsContainer(null); 
 		
 		
-	  	$check = $container->get('script@inc.common.bootstrap');
+	 // 	$check = $container->get('script@inc.common.bootstrap');
 		
 		/*
           \Webfan\Patches\Start\Timezone2::defaults( );
@@ -372,6 +373,7 @@ ORDER BY (data_length + index_length) DESC";
 	//		$container->get('script@service.html.bootstrap');	
 		//} 		
       return [$Stubrunner, $container];
+	 });
 	}
 				   
 				   
@@ -471,9 +473,9 @@ ORDER BY (data_length + index_length) DESC";
 		
 	
 		
-   //  $check = $CircuitBreaker->protect(function() use($container, $Stunrunner, &$me){	
+    $check = $CircuitBreaker->protect(function() use($container, $Stubrunner, &$me){	
 			
-		
+	   // $check = $container->get('script@inc.common.bootstrap');
 	//	$check =$container->get('script@inc.common.bootstrap');
            //$me -> bootIO4(null);
 		
@@ -595,6 +597,7 @@ ORDER BY (data_length + index_length) DESC";
                    
 			}
 			if(true === $html){
+				throw new \Exception('Not implemented graceful yet: '.__METHOD__.__LINE__);
 				OIDplus::init(false);
 			}
 		  }
@@ -762,8 +765,8 @@ ORDER BY (data_length + index_length) DESC";
 		
 		
 		
-  //  	 return $check;
- // });	//circuit breaker
+      	 return true;
+    });	//circuit breaker
 		
 			
 		if(!static::is_cli() || true === $html){
