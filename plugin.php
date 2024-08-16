@@ -1,7 +1,7 @@
 <?php
 /**
  * Plugin Name: IO4 
- * Description: This is an example WP plugin that utilizes Keygen for licensing.
+ * Description: This is an example OIDplus/IO4-Plugin aware and enabled Plugin.
  * Version: 0.0.1
  * Author: Frdlweb
  * Author URI: https://frdl.de
@@ -16,16 +16,7 @@ namespace Frdlweb\OIDplus;
 	use ViaThinkSoft\OIDplus\Core\OIDplusPagePluginPublic;
 	use ViaThinkSoft\OIDplus\Core\OIDplusPagePluginRa;
 	use ViaThinkSoft\OIDplus\Core\OIDplusPlugin;
-/*
-	use ViaThinkSoft\OIDplus\Core\OIDplusPagePluginAdmin;
-	use ViaThinkSoft\OIDplus\Plugins\AdminPages\Notifications\OIDplusNotification;
-	use ViaThinkSoft\OIDplus\Plugins\ObjectTypes\OID\WeidOidConverter;
-	use ViaThinkSoft\OIDplus\Plugins\PublicPages\Whois\INTF_OID_1_3_6_1_4_1_37476_2_5_2_3_4;
-	use ViaThinkSoft\OIDplus\Plugins\PublicPages\Objects\INTF_OID_1_3_6_1_4_1_37476_2_5_2_3_2;
-	use ViaThinkSoft\OIDplus\Plugins\AdminPages\Notifications\INTF_OID_1_3_6_1_4_1_37476_2_5_2_3_8;
-	use ViaThinkSoft\OIDplus\Plugins\PublicPages\RestApi\INTF_OID_1_3_6_1_4_1_37476_2_5_2_3_9;
-
-*/
+ 
  
 
 
