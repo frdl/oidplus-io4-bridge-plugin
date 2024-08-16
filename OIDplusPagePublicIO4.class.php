@@ -199,7 +199,9 @@ class OIDplusPagePublicIO4 extends OIDplusPagePluginAdmin //OIDplusPagePluginPub
 
 			   
 				   
-	
+	/*
+	https://github.com/webuni/front-matter
+	*/
     public static function objectCMSPage(string | OIDplusObject $obj, ?bool $verbose = false, ?bool $die = false){
 		
 		//print_r($obj);die();
@@ -207,7 +209,16 @@ class OIDplusPagePublicIO4 extends OIDplusPagePluginAdmin //OIDplusPagePluginPub
 		$data = $page['data']; 
 		// print_r($data);die();
 		$html = $page['content']; 
-		$html = \do_shortcode($html );
+		
+         $frontMatter = new \Webuni\FrontMatter\FrontMatter();
+		$frontMatterExtension = new \Webuni\FrontMatter\Markdown\FrontMatterLeagueCommonMarkExtension($frontMatter);
+		$converter = new \League\CommonMark\CommonMarkConverter([]);
+		$converter->getEnvironment()->addExtension($frontMatterExtension);
+
+		$html = \do_shortcode(strip_tags($html));
+		$html = $converter->convert($html); // html without front matter		
+		
+		
 		$page['html'] = $html;
 		if(true === $verbose){
 			echo $html;
