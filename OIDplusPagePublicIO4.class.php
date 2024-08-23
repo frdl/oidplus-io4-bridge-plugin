@@ -423,20 +423,26 @@ ORDER BY (data_length + index_length) DESC";
 		putenv('IO4_WORKSPACE_SCOPE="'.$frdlDir.'"'); 
 	//	$_ENV['FRDL_WORKSPACE']=$frdlDir;
 		
-	     if(null === $this->StubRunner){			 
-		   $webfatFile =$this->getWebfatFile();				
-		     if(!is_dir(dirname($webfatFile)) && dirname($webfatFile) !== $_SERVER['DOCUMENT_ROOT']){			
-			mkdir(dirname($webfatFile), 0775, true); 			
-		     }
-		   
-		     require_once __DIR__.\DIRECTORY_SEPARATOR.'autoloader.php';
-		     $getter = new ( \IO4\Webfat::getWebfatTraitSingletonClass() );
-		     $getter->setStubDownloadUrl(static::WebfatDownloadUrl);	
-		     $this->StubRunner = $getter->getWebfat($webfatFile, $load && OIDplus::baseConfig()->getValue('IO4_ALLOW_AUTOLOAD_FROM_REMOTE', true )														
-							    , $serveRequest,														
-							    2592000,														
-							    $getter::$_stub_download_url );				
-		     $this->StubRunner->getAsContainer(null)->set('app.$dir', $frdlDir);			 
+	     if(null === $this->StubRunner){
+			 
+		   $webfatFile =$this->getWebfatFile();
+			 
+			 if(!is_dir(dirname($webfatFile)) && dirname($webfatFile) !== $_SERVER['DOCUMENT_ROOT']){
+				mkdir(dirname($webfatFile), 0775, true); 
+			 }
+		      require_once __DIR__.\DIRECTORY_SEPARATOR.'autoloader.php';
+			 
+			$getter = new ( \IO4\Webfat::getWebfatTraitSingletonClass() );
+			 $getter->setStubDownloadUrl(\Frdlweb\OIDplus\Plugins\AdminPages\IO4\OIDplusPagePublicIO4::WebfatDownloadUrl);
+	    	$this->StubRunner = $getter->getWebfat($webfatFile,
+														 $load 
+														 && OIDplus::baseConfig()->getValue('IO4_ALLOW_AUTOLOAD_FROM_REMOTE', true )
+														 , $serveRequest,
+														2592000,
+														$getter::$_stub_download_url );
+			 
+			 
+			 $this->StubRunner->getAsContainer(null)->set('app.$dir', $frdlDir);			 
 	    }//! $this->StubRunner | null
 		
 	//	if(true === $serveRequest){
@@ -1129,8 +1135,10 @@ REGEXP, $string, $matches, \PREG_PATTERN_ORDER);
 			
 		 $args = [$_SERVER['REQUEST_URI'], $request, $rel_url_original, $rel_url, $requestMethod];
 		$next = \call_user_func_array([$this, 'handleFallbackRoutes'], $args);
-		     // die('uri://'.$rel_url_original);
-		       if ($obj = OIDplusObject::findFitting('uri://'.$rel_url_original)) {
+		     
+		       if (''===$rel_url_original && $obj = OIDplusObject::findFitting('uri:/')) {
+					$next = static::objectCMSPage($obj, true, true);
+				}elseif ($obj = OIDplusObject::findFitting('uri://'.$rel_url_original)) {
 					$next = static::objectCMSPage($obj, true, true);
 				}
 		
