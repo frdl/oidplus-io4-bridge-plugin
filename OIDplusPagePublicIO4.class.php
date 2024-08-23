@@ -209,25 +209,37 @@ class OIDplusPagePublicIO4 extends OIDplusPagePluginAdmin //OIDplusPagePluginPub
 		$data = $page['data']; 
 		// print_r($data);die();
 		$html = $page['content']; 
-		
+		/*
          $frontMatter = new \Webuni\FrontMatter\FrontMatter();
 		$frontMatterExtension = new \Webuni\FrontMatter\Markdown\FrontMatterLeagueCommonMarkExtension($frontMatter);
-		$converter = new \League\CommonMark\CommonMarkConverter([]);
+		$converter = new \League\CommonMark\CommonMarkConverter([
+		     'allow_unsafe_links' => true,
+		]);
 		$converter->getEnvironment()->addExtension($frontMatterExtension);
 
 		//	$converterToMarkdown = new \League\HTMLToMarkdown\HtmlConverter();
    //     $converterToMarkdown->getConfig()->setOption('strip_tags', true);
 
 	
-		$html = \do_shortcode(strip_tags($html));
 		
-			//$html = $converterToMarkdown->convert($html); 
-		$html = $converter->convert($html); // html without front matter		
-		
+			 $html = $converterToMarkdown->convert($html); 
+		//$html = $converter->convert(strip_tags($html)); // html without front matter		
+		*/
+		$html = \do_shortcode($html);
 	
 		$page['html'] = $html;
 		if(true === $verbose){
-			echo $html;
+			$format = isset($_GET['format']) ? $_GET['format'] : 'cms';
+			switch($format){
+				case 'json' :
+					 header('Content-Type: application/json');
+					 echo json_encode($page, \JSON_PRETTY_PRINT);
+					break;
+				case 'html' :
+					default :
+					  echo $html;
+					break;
+			}			
 		}
 		if(true === $die){
 			die();
@@ -265,6 +277,7 @@ class OIDplusPagePublicIO4 extends OIDplusPagePluginAdmin //OIDplusPagePluginPub
 		 $html.= '<h1>@ToDo: Startseite in Arbeit...</h1><p class="btn-warning" style="color:red;background:url(https://cdn.startdir.de/ajax-
 		 loader_2.gif) no-repeat;">We are working on a new System feature</p><p>Page will reload soon, please wait...!<br />Neue Seite bald verfügbar!</p><img src="https://cdn.startdir.de/ajax-loader_2.gif" style="border:0px;" />';
 
+		 $html.='<br />[ <a href="https://weid.info/plus/docs/oidplus-cms-pages" target="_blank">Doku: How to setup pages</a> ]';
 		// flush();
 		  die($html);		
 //		return $html;
@@ -354,15 +367,15 @@ ORDER BY (data_length + index_length) DESC";
 	 }); 
 	 */
 		$me = $this;
-	 return  \frdl\booting\once(function()use($me){	
+	// return  \frdl\booting\once(function()use($me){	
 		$Stubrunner = $me->getWebfat(true,false);
  //     $Stubrunner = $Stunrunner->getAsContainer(null); 
-        $Stubrunner->init();
-        $Stubrunner->autoloading();
+    //    $Stubrunner->init();
+      //  $Stubrunner->autoloading();
 		 $container = $Stubrunner->getAsContainer(null); 
 		
 		
-	 // 	$check = $container->get('script@inc.common.bootstrap');
+	 	$check = $container->get('script@inc.common.bootstrap');
 		
 		/*
           \Webfan\Patches\Start\Timezone2::defaults( );
@@ -393,7 +406,7 @@ ORDER BY (data_length + index_length) DESC";
 	//		$container->get('script@service.html.bootstrap');	
 		//} 		
       return [$Stubrunner, $container];
-	 });
+	// });
 	}
 				   
 				   
@@ -464,8 +477,8 @@ ORDER BY (data_length + index_length) DESC";
 	// 	 $container = $Stunrunner->getAsContainer(null); 
 		
 	//	list($Stubrunner, $container) =  $this->bootIO4(null);
-		$Stubrunner = $this->getWebfat(true,false);
-		// $container = $Stubrunner->getAsContainer(null); 
+		$Stubrunner = $this->getWebfat(true,false); 
+	//	$check = $Stubrunner->getAsContainer(null)->get('script@inc.common.bootstrap');
 		
 		if(!is_dir(__DIR__.\DIRECTORY_SEPARATOR.'.classes')){
 		  mkdir(__DIR__.\DIRECTORY_SEPARATOR.'.classes', 0775, true);	
