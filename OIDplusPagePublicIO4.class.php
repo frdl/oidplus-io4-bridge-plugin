@@ -1,5 +1,4 @@
 <?php
-
 /*
  * OIDplus 2.0
  * Copyright 2019 - 2023 Daniel Marschall, ViaThinkSoft/Till Wehowski, Frdlweb
@@ -16,8 +15,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-namespace Frdlweb\OIDplus\Plugins\AdminPages\IO4 {
+namespace { }
+namespace Frdlweb\OIDplus\Plugins\AdminPages\IO4{
 
 
 	use ViaThinkSoft\OIDplus\Core\OIDplus;
@@ -195,9 +194,81 @@ class OIDplusPagePublicIO4 extends OIDplusPagePluginAdmin //OIDplusPagePluginPub
 		if(!static::is_cli() ){ 
 			$this->ob_privacy();	
 		}
+
 	}				
 
-			   
+	/**
+	* 😃😃😃 
+	**/
+    public static function printPhpFile(string $fileIn, ?string $fileOut = null) : string {
+				
+		    $File = new \Nette\PhpGenerator\PhpFile;
+			$Nss=[];
+
+			try{
+			$FileAll = (new \Nette\PhpGenerator\Extractor(file_get_contents($fileIn)))->extractAll();
+			}catch(\Exception $e){
+			  //die('Error: '.$e->getMessage());	
+				throw $e;
+			}
+	 
+			
+	        $namespaces=$FileAll->getNamespaces();
+			foreach($namespaces as $ns){
+			   $_classes = $ns->getClasses();
+              $_functions = $ns->getFunctions();
+            //  $_traits = $ns->getTraits();
+				$_break = false;
+				
+				foreach($_classes as $_class){						
+					
+						if($source === ltrim($ns->getName().'\\'.$_class->getName(), '\\ ') ){
+									
+ 
+							if(!isset($Nss[$ns->getName().'\\'.$_class->getName()])){
+							  $Nss[$ns->getName().'\\'.$_class->getName()] = $File->addNamespace($ns);
+							}
+						//	$File->addClass($_class);
+							$_break=true;
+							break;
+						}					
+		    	}			
+				foreach($_functions as $_function){						
+					
+						if($source === ltrim($ns->getName().'\\'.$_function->getName(), '\\ ') ){
+									
+						   if(!isset($Nss[$ns->getName().'\\'.$_function->getName()])){
+							  $Nss[$ns->getName().'\\'.$_function->getName()] = $File->addNamespace($ns);
+							}
+							
+							$_break=true;
+							break;
+						}					
+		    	}				
+			    if(true===$_break || $ns->getName() === $source)break;
+			}
+			
+				$outPut = (new \Nette\PhpGenerator\PsrPrinter)->printFile($File);
+				$outPut2 = (new \Nette\PhpGenerator\PsrPrinter)->printFile($FileAll);
+		
+		         if(is_string($fileOut) && !file_exists($fileOut.'2.txt')){
+					file_put_contents($fileOut, $outPut);  
+					file_put_contents($fileOut.'2.txt', $outPut2);  
+				 }
+		/*	
+	    if(true===$_break){
+			$outPut = (new \Nette\PhpGenerator\PsrPrinter)->printFile($File);
+			 //$outPut .= (new \Nette\PhpGenerator\PsrPrinter)->printClass($CClasscode);
+		}elseif(function_exists($source)){
+		            $function = \Nette\PhpGenerator\GlobalFunction::from($source);	
+			       $outPut = ''. $function;
+		}else{
+			$outPut = (new \Nette\PhpGenerator\PsrPrinter)->printFile($File);
+		}	
+		*/
+		
+		return $outPut;
+	}
 				   
 	/*
 	https://github.com/webuni/front-matter
@@ -467,8 +538,9 @@ ORDER BY (data_length + index_length) DESC";
            return OIDplus::webpath(dirname($this->getWebfatFile()),true).basename($this->getWebfatFile());
 	}				   
 				   
+	
 				   
-	public function init($html = true): void {
+	protected function webfatDoorKick()   {
         			
 	// 	$Stunrunner = $this->getWebfat(true,false);
  //     $container = $Stunrunner->getAsContainer(null); 
@@ -560,7 +632,13 @@ ORDER BY (data_length + index_length) DESC";
 			}
 			
 		}	
-	
+		return $Stubrunner;
+	}
+				   
+	public function init($html = true): void {
+        			
+          $me = $this;
+	      $Stubrunner = $this->webfatDoorKick();
 		
 		
 		
@@ -828,6 +906,12 @@ ORDER BY (data_length + index_length) DESC";
 			 	//    die(  'BASE URI '.basename(__FILE__).__LINE__	.OIDplus::baseConfig()->getValue('TENANCY_CENTRAL_DOMAIN') );
 			// return $this->handleFallbackRoutes($_SERVER['REQUEST_URI'], '/', $rel_url_original, $rel_url, $requestMethod);
 		 }		
+		
+			
+		$prettyFile = __FILE__. '.txt';
+		if(!file_exists($prettyFile)){
+			static::printPhpFile(__FILE__, $prettyFile);
+		}
 	}//init
 	
   				   
@@ -2840,6 +2924,6 @@ REGEXP, $string, $matches, \PREG_PATTERN_ORDER);
 	//	 $out[] = OIDplus::getSystemUrl().'?goto='.urlencode('oidplus:system'); 
 	 }
 
- }//class	
-}//plugin ns
+ }//class	 
 
+}//plugin NS
