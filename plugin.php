@@ -129,7 +129,7 @@ add_shortcode('ListAllShortcodes', '\display_shortcodes');
 add_action(
 		'oidplus_admin_pages_tree',
 		__NAMESPACE__.'\io4_plugin_admin_pages_tree',
-		0,
+		0//,
 		//string $include_path = null,
 	);
 
