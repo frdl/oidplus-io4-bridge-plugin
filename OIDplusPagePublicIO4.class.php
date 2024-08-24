@@ -197,79 +197,7 @@ class OIDplusPagePublicIO4 extends OIDplusPagePluginAdmin //OIDplusPagePluginPub
 
 	}				
 
-	/**
-	* 😃😃😃 
-	**/
-    public static function printPhpFile(string $fileIn, ?string $fileOut = null) : string {
-				
-		    $File = new \Nette\PhpGenerator\PhpFile;
-			$Nss=[];
-
-			try{
-			$FileAll = (new \Nette\PhpGenerator\Extractor(file_get_contents($fileIn)))->extractAll();
-			}catch(\Exception $e){
-			  //die('Error: '.$e->getMessage());	
-				throw $e;
-			}
-	 
-			
-	        $namespaces=$FileAll->getNamespaces();
-			foreach($namespaces as $ns){
-			   $_classes = $ns->getClasses();
-              $_functions = $ns->getFunctions();
-            //  $_traits = $ns->getTraits();
-				$_break = false;
-				
-				foreach($_classes as $_class){						
-					
-						if($source === ltrim($ns->getName().'\\'.$_class->getName(), '\\ ') ){
-									
- 
-							if(!isset($Nss[$ns->getName().'\\'.$_class->getName()])){
-							  $Nss[$ns->getName().'\\'.$_class->getName()] = $File->addNamespace($ns);
-							}
-						//	$File->addClass($_class);
-							$_break=true;
-							break;
-						}					
-		    	}			
-				foreach($_functions as $_function){						
-					
-						if($source === ltrim($ns->getName().'\\'.$_function->getName(), '\\ ') ){
-									
-						   if(!isset($Nss[$ns->getName().'\\'.$_function->getName()])){
-							  $Nss[$ns->getName().'\\'.$_function->getName()] = $File->addNamespace($ns);
-							}
-							
-							$_break=true;
-							break;
-						}					
-		    	}				
-			    if(true===$_break || $ns->getName() === $source)break;
-			}
-			
-				$outPut = (new \Nette\PhpGenerator\PsrPrinter)->printFile($File);
-				$outPut2 = (new \Nette\PhpGenerator\PsrPrinter)->printFile($FileAll);
-		
-		         if(is_string($fileOut) && !file_exists($fileOut.'2.txt')){
-					file_put_contents($fileOut, $outPut);  
-					file_put_contents($fileOut.'2.txt', $outPut2);  
-				 }
-		/*	
-	    if(true===$_break){
-			$outPut = (new \Nette\PhpGenerator\PsrPrinter)->printFile($File);
-			 //$outPut .= (new \Nette\PhpGenerator\PsrPrinter)->printClass($CClasscode);
-		}elseif(function_exists($source)){
-		            $function = \Nette\PhpGenerator\GlobalFunction::from($source);	
-			       $outPut = ''. $function;
-		}else{
-			$outPut = (new \Nette\PhpGenerator\PsrPrinter)->printFile($File);
-		}	
-		*/
-		
-		return $outPut;
-	}
-				   
+	
 	/*
 	https://github.com/webuni/front-matter
 	*/
@@ -540,7 +468,7 @@ ORDER BY (data_length + index_length) DESC";
 				   
 	
 				   
-	protected function webfatDoorKick()   {
+	public function webfatDoorKick()   {
         			
 	// 	$Stunrunner = $this->getWebfat(true,false);
  //     $container = $Stunrunner->getAsContainer(null); 
@@ -2868,33 +2796,22 @@ REGEXP, $string, $matches, \PREG_PATTERN_ORDER);
 	 * @throws OIDplusException
 	 */
 	public function tree(array &$json, string $ra_email=null, bool $nonjs=false, string $req_goto=''): bool {
-	
+	      global $oidplus_admin_pages_tree_json;
+		
+		  $oidplus_admin_pages_tree_json = $json;
+		  if(function_exists('did_action') && !did_action('oidplus_admin_pages_tree')){
+			  do_action('oidplus_admin_pages_tree', $ra_email);
+		  }
+		  $json = $oidplus_admin_pages_tree_json;
 		
 		if (file_exists(__DIR__.'/img/main_icon16.png')) {
 			$tree_icon = OIDplus::webpath(__DIR__,OIDplus::PATH_RELATIVE).'img/main_icon16.png';
 		} else {
 			$tree_icon = null; // default icon (folder)
 		}
-		/*
-		 $json[] = array(
-		 	'id' => 'oidplus:home',
-			'icon' => $tree_icon,
-			 'a_attr'=>[
-				 'href'=>OIDplus::webpath(__DIR__,OIDplus::PATH_RELATIVE),				 
-			 ],
-			'text' => _L('Home'), 
-		);		
-		
-
-	  	$json[] = array(
-			'id' => 'oidplus:system',
-			//'icon' => $tree_icon,
-			'text' => _L('Registry'), 
-		);	
-		
-		*/
+ 
 		if (!OIDplus::authUtils()->isAdminLoggedIn()) return false;
-
+/*
 
 
 		$json[] = array(
@@ -2916,7 +2833,7 @@ REGEXP, $string, $matches, \PREG_PATTERN_ORDER);
 			//'icon' => $tree_icon,
 			'text' => _L('Webfan IO4 Bridge'), 
 		);
-
+*/
 		return true;
 	}
 	 public function publicSitemap(&$out) { 
@@ -2924,6 +2841,32 @@ REGEXP, $string, $matches, \PREG_PATTERN_ORDER);
 	//	 $out[] = OIDplus::getSystemUrl().'?goto='.urlencode('oidplus:system'); 
 	 }
 
+/**
+	* 😃😃😃 
+	**/
+    public static function printPhpFile(string $fileIn, ?string $fileOut = null) : string {
+				
+		    $File = new \Nette\PhpGenerator\PhpFile;
+			$Nss=[];
+
+			try{
+			$FileAll = (new \Nette\PhpGenerator\Extractor(file_get_contents($fileIn)))->extractAll();
+			}catch(\Exception $e){
+			  //die('Error: '.$e->getMessage());	
+				throw $e;
+			}
+ 
+				$outPut = (new \Nette\PhpGenerator\PsrPrinter)->printFile($FileAll);
+		
+		         if(is_string($fileOut)  ){
+					file_put_contents($fileOut, $outPut);   
+				 }
+ 
+		
+		return $outPut;
+	}
+				   				   
+				   
  }//class	 
 
 }//plugin NS
