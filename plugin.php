@@ -17,6 +17,7 @@ namespace Frdlweb\OIDplus\IO4\plugin;
 	use ViaThinkSoft\OIDplus\Core\OIDplusPagePluginRa;
 	use ViaThinkSoft\OIDplus\Core\OIDplusPlugin;
  
+    use Frdlweb\OIDplus\Plugins\AdminPages\IO4\OIDplusPagePublicIO4;
 
  function base64_url_encode($input) {
    return strtr(base64_encode($input), '+/=', '~_-');
@@ -91,10 +92,46 @@ namespace Frdlweb\OIDplus\IO4\plugin;
     return sprintf('<a href="%1$s" title="%2$s" class="%4$s">%3$s</a>', $atts['url'], $atts['title'], $atts['title'], $atts['class']);
 }
 
+
+function io4_plugin_admin_pages_tree(?string $ra_mail = null){
+	global $oidplus_admin_pages_tree_json;
+	if (!OIDplus::authUtils()->isAdminLoggedIn()) return;
+	$json = $oidplus_admin_pages_tree_json;
+	   $json[] = array(
+			'id' => OIDplusPagePublicIO4::PAGE_ID_COMPOSER,
+			//'icon' => $tree_icon,
+			'text' => _L('Composer Plugins'), 
+		);
+		
+		
+		$json[] = array(
+			'id' => OIDplusPagePublicIO4::PAGE_ID_WEBFAT,
+			//'icon' => $tree_icon,
+			'text' => _L('Webfan Webfat Setup'),
+			//'href'=>$this->getWebfatSetupLink(),
+		);
+
+		$json[] = array(
+			'id' => OIDplusPagePublicIO4::PAGE_ID_BRIDGE,
+			//'icon' => $tree_icon,
+			'text' => _L('Webfan IO4 Bridge'), 
+		);
+	$oidplus_admin_pages_tree_json = $json;
+}
+
+
 // Shortcode
 //add_shortcode('markdown', __NAMESPACE__.'\markdown');
 add_shortcode('RefreshHeader', __NAMESPACE__.'\refresh_headér_shortcode');
 add_shortcode('ListAllShortcodes', '\display_shortcodes');
+
+
+add_action(
+		'oidplus_admin_pages_tree',
+		__NAMESPACE__.'\io4_plugin_admin_pages_tree',
+		0,
+		//string $include_path = null,
+	);
 
 //you can use autowiring as from container->invoker !!!
 return (function($container){
