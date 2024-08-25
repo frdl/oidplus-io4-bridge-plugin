@@ -202,12 +202,15 @@ class OIDplusPagePublicIO4 extends OIDplusPagePluginAdmin //OIDplusPagePluginPub
 	https://github.com/webuni/front-matter
 	*/
     public static function objectCMSPage(string | OIDplusObject $obj, ?bool $verbose = false, ?bool $die = false){
-		
+		global $oidplus_current_object_id;
+		global $oidplus_current_page_context;
+		global $oidplus_current_page_verbose;
 		//print_r($obj);die();
 		$page  = frdl_ini_dot_parse(is_string($obj) ? $obj : $obj->getDescription(), true);
-		$data = $page['data']; 
+		$page['data']['id'] = is_string($obj) ? $obj : $obj->nodeId();
+		//$data = $page['data']; 
 		// print_r($data);die();
-		$html = $page['content']; 
+		
 		/*
          $frontMatter = new \Webuni\FrontMatter\FrontMatter();
 		$frontMatterExtension = new \Webuni\FrontMatter\Markdown\FrontMatterLeagueCommonMarkExtension($frontMatter);
@@ -224,9 +227,19 @@ class OIDplusPagePublicIO4 extends OIDplusPagePluginAdmin //OIDplusPagePluginPub
 			 $html = $converterToMarkdown->convert($html); 
 		//$html = $converter->convert(strip_tags($html)); // html without front matter		
 		*/
-		$html = \do_shortcode($html);
-	
+		
+		$oidplus_current_object_id = $page['data']['id'];
+		$oidplus_current_page_context = $page;
+		$oidplus_current_page_verbose= $verbose;
+			
+		$html = $page['content']; 
+		$html = \do_shortcode($html);		
 		$page['html'] = $html;
+		
+		unset($oidplus_current_object_id);
+		unset($oidplus_current_page_context);
+		unset($oidplus_current_page_verbose);
+		
 		if(true === $verbose){
 			$format = isset($_GET['format']) ? $_GET['format'] : 'cms';
 			switch($format){
@@ -235,8 +248,9 @@ class OIDplusPagePublicIO4 extends OIDplusPagePluginAdmin //OIDplusPagePluginPub
 					 echo json_encode($page, \JSON_PRETTY_PRINT);
 					break;
 				case 'html' :
+				case 'body' :
 					default :
-					  echo $html;
+					  echo $page['html'] ;
 					break;
 			}			
 		}
@@ -1058,6 +1072,10 @@ REGEXP, $string, $matches, \PREG_PATTERN_ORDER);
 		       if (''===$rel_url_original && $obj = OIDplusObject::findFitting('uri:/')) {
 					$next = static::objectCMSPage($obj, true, true);
 				}elseif ($obj = OIDplusObject::findFitting('uri://'.$rel_url_original)) {
+					$next = static::objectCMSPage($obj, true, true);
+				}elseif ($obj = OIDplusObject::findFitting('uri:/'.$rel_url_original)) {
+					$next = static::objectCMSPage($obj, true, true);
+				}elseif ($obj = OIDplusObject::findFitting('uri:'.$rel_url_original)) {
 					$next = static::objectCMSPage($obj, true, true);
 				}
 		
