@@ -95,7 +95,7 @@ use Frdlweb\OIDplus\Plugins\AdminPages\IO4\OIDplusPagePublicIO4;
 	 
     $atts = shortcode_atts(
         array(
-            'url' => OIDplus::webpath(null, OIDplus::PATH_RELATIVE_TO_ROOT).'?goto='.urlencode($oidplus_current_page_context['data']['id']),
+            'url' => OIDplus::webpath(null, OIDplus::PATH_ABSOLUTE_CANONICAL).'?goto='.urlencode($oidplus_current_page_context['data']['id']),
 			'title'=>'Link to this page in the repository',
 			'class'=>'btn btn-link',
         ),
