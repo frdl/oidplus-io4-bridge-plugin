@@ -90,6 +90,23 @@ use Frdlweb\OIDplus\Plugins\AdminPages\IO4\OIDplusPagePublicIO4;
     return sprintf('<a href="%1$s" title="%2$s" class="%4$s">%3$s</a>', $atts['url'], $atts['title'], $atts['title'], $atts['class']);
 }
 
+ function object_repository_link($atts) {
+    global $oidplus_current_page_context;
+	 
+    $atts = shortcode_atts(
+        array(
+            'url' => OIDplus::webpath(null, OIDplus::PATH_RELATIVE_TO_ROOT).'?goto='.urlencode($oidplus_current_page_context['data']['id']),
+			'title'=>'Link to this page in the repository',
+			'class'=>'btn btn-link',
+        ),
+        $atts
+    );
+
+  
+    return sprintf('<a href="%1$s" title="%2$s" class="%4$s">%3$s</a>', $atts['url'], $atts['title'], $atts['title'], $atts['class']);
+}
+
+
 
 function io4_plugin_admin_pages_tree(?string $ra_mail = null){
 	global $oidplus_admin_pages_tree_json;
@@ -121,6 +138,7 @@ function io4_plugin_admin_pages_tree(?string $ra_mail = null){
 // Shortcode
 //add_shortcode('markdown', __NAMESPACE__.'\markdown');
 add_shortcode('RefreshHeader', __NAMESPACE__.'\refresh_headér_shortcode');
+add_shortcode('ObjectRepositoryLink', __NAMESPACE__.'\object_repository_link');
 add_shortcode('ListAllShortcodes', '\display_shortcodes');
 
 
