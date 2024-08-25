@@ -191,9 +191,9 @@ class OIDplusPagePublicIO4 extends OIDplusPagePluginAdmin //OIDplusPagePluginPub
 		$this->schemaCacheDir = OIDplus::baseConfig()->getValue('SCHEMA_CACHE_DIRECTORY', OIDplus::localpath().'userdata/cache/' );
 		$this->schemaCacheExpires = OIDplus::baseConfig()->getValue('SCHEMA_CACHE_EXPIRES', 60 * 60 );		
 		
-		if(!static::is_cli() ){ 
-			$this->ob_privacy();	
-		}
+		//if(!static::is_cli() ){ 
+	//		$this->ob_privacy();	
+	//	}
 
 	}				
 
@@ -468,100 +468,7 @@ ORDER BY (data_length + index_length) DESC";
 				   
 	
 				   
-	public function webfatDoorKick()   {
-        			
-	// 	$Stunrunner = $this->getWebfat(true,false);
- //     $container = $Stunrunner->getAsContainer(null); 
-    //     $Stunrunner->init();
-     //    $Stunrunner->autoloading();
-	// 	 $container = $Stunrunner->getAsContainer(null); 
-		
-	//	list($Stubrunner, $container) =  $this->bootIO4(null);
-		$Stubrunner = $this->getWebfat(true,false); 
-	//	$check = $Stubrunner->getAsContainer(null)->get('script@inc.common.bootstrap');
-		
-		if(!is_dir(__DIR__.\DIRECTORY_SEPARATOR.'.classes')){
-		  mkdir(__DIR__.\DIRECTORY_SEPARATOR.'.classes', 0775, true);	
-		}
-		
-		if(!is_dir(__DIR__.\DIRECTORY_SEPARATOR.'.functions')){
-		  mkdir(__DIR__.\DIRECTORY_SEPARATOR.'.functions', 0775, true);	
-		}
-		
-		if(!self::$autoloaderRegistered){
-		      self::$autoloaderRegistered=true;	
-			  $loader = new \Webfan\Autoload\LocalPsr4Autoloader; 
-			  $loader->addNamespace('\\',
-						   __DIR__.\DIRECTORY_SEPARATOR.'.classes',
-						   false);
-			  $loader->addNamespace('\\',
-						   __DIR__.\DIRECTORY_SEPARATOR.'classes',
-						   false);
-		     $loader->register(true) ;		
-		 }
-	
-		
-		//    $CircuitBreaker = $container->get('CircuitBreaker');	
 
-		$me = $this;
-		
-	
-		
-   //  $check = $CircuitBreaker->protect(function() use($container, $Stubrunner, &$me){	
-			
-	   // $check = $container->get('script@inc.common.bootstrap');
-	//	$check =$container->get('script@inc.common.bootstrap');
-           //$me -> bootIO4(null);
-		
-		
-		
-        $isWPHooksFunctionsInstalled 
-		   = (//true === @\WPHooksFunctions::defined ||
-			  \call_user_func_array(function(string $url,string $file,int $limit){
-	       if(!file_exists($file) || ($limit > 0 && filemtime($file) < time() - $limit ) ){
-		      $code = file_get_contents($url);
-			    
-		       if(false!==$code){
-			     file_put_contents($file, $code); 
-	        	}
-	        }
-	 
-	      require_once $file;
-	 
-              return function_exists('add_action');	 
-           }, ['https://webfan.de/install/?source=WPHooksFunctions',
-							__DIR__.\DIRECTORY_SEPARATOR.'.functions'.\DIRECTORY_SEPARATOR.'wp-shimmy-polyfill.php',
-	     -1]));		
-
-		
-		  if(!$isWPHooksFunctionsInstalled){
-			 throw new \Exception('Could not init wp-functions-shim in '.__METHOD__.' '.__LINE__);  
-		  }
-		
-		
-		 $me->selfToPackage();
-		
-		foreach(OIDplus::getAllPlugins() as $plugin){
-			//if ($plugin instanceof INTF_OID_1_3_6_1_4_1_37553_8_1_8_8_53354196964_1276945) {
-			//	$out = $plugin->rdapExtensions($out, $namespace, $id, $obj, $query);
-			//}
-			$dir = $plugin->getPluginDirectory();
-			$file = rtrim($dir, '\\/ ').\DIRECTORY_SEPARATOR.'plugin.php';
-			if(file_exists($file)){
-				$pData = \get_file_data($file, ['Name'=>'Plugin Name', 'Author'=>'Author', 'Version'=>'Version', 'License'=>'License',]);
-			//	print_r($pData);
-				//die();
-				if(count($pData) >= 3){
-					$fn = include $file;
-					if(is_callable($fn)){
-						$Stubrunner->call($fn);
-					}
-				}
-			}
-			
-		}	
-		return $Stubrunner;
-	}
 				   
 	public function init($html = true): void {
         			
@@ -2865,7 +2772,119 @@ REGEXP, $string, $matches, \PREG_PATTERN_ORDER);
 		
 		return $outPut;
 	}
+				   
 				   				   
+	public function webfatDoorKick()   {
+        			
+	// 	$Stunrunner = $this->getWebfat(true,false);
+ //     $container = $Stunrunner->getAsContainer(null); 
+    //     $Stunrunner->init();
+     //    $Stunrunner->autoloading();
+	// 	 $container = $Stunrunner->getAsContainer(null); 
+		
+	//	list($Stubrunner, $container) =  $this->bootIO4(null);
+		$Stubrunner = $this->getWebfat(true,false); 
+	//	$check = $Stubrunner->getAsContainer(null)->get('script@inc.common.bootstrap');
+		
+		if(!is_dir(__DIR__.\DIRECTORY_SEPARATOR.'.classes')){
+		  mkdir(__DIR__.\DIRECTORY_SEPARATOR.'.classes', 0775, true);	
+		}
+		
+		if(!is_dir(__DIR__.\DIRECTORY_SEPARATOR.'.functions')){
+		  mkdir(__DIR__.\DIRECTORY_SEPARATOR.'.functions', 0775, true);	
+		}
+		
+		if(!self::$autoloaderRegistered){
+		      self::$autoloaderRegistered=true;	
+			  $loader = new \Webfan\Autoload\LocalPsr4Autoloader; 
+			  $loader->addNamespace('\\',
+						   __DIR__.\DIRECTORY_SEPARATOR.'.classes',
+						   false);
+			  $loader->addNamespace('\\',
+						   __DIR__.\DIRECTORY_SEPARATOR.'classes',
+						   false);
+		     $loader->register(true) ;		
+		 }
+	
+		
+		//    $CircuitBreaker = $container->get('CircuitBreaker');	
+
+		$me = $this;
+		
+	
+		
+   //  $check = $CircuitBreaker->protect(function() use($container, $Stubrunner, &$me){	
+			
+	   // $check = $container->get('script@inc.common.bootstrap');
+	//	$check =$container->get('script@inc.common.bootstrap');
+           //$me -> bootIO4(null);
+		
+		
+		
+        $isWPHooksFunctionsInstalled 
+		   = (//true === @\WPHooksFunctions::defined ||
+			  \call_user_func_array(function(string $url,string $file,int $limit){
+	       if(!file_exists($file) || ($limit > 0 && filemtime($file) < time() - $limit ) ){
+		      $code = file_get_contents($url);
+			    
+		       if(false!==$code){
+			     file_put_contents($file, $code); 
+	        	}
+	        }
+	 
+	      require_once $file;
+	 
+              return function_exists('add_action');	 
+           }, ['https://webfan.de/install/?source=WPHooksFunctions',
+							__DIR__.\DIRECTORY_SEPARATOR.'.functions'.\DIRECTORY_SEPARATOR.'wp-shimmy-polyfill.php',
+	     -1]));		
+
+		
+		  if(!$isWPHooksFunctionsInstalled){
+			 throw new \Exception('Could not init wp-functions-shim in '.__METHOD__.' '.__LINE__);  
+		  }
+		
+		
+		 $me->selfToPackage();
+		
+		foreach(OIDplus::getAllPlugins() as $plugin){
+			//if ($plugin instanceof INTF_OID_1_3_6_1_4_1_37553_8_1_8_8_53354196964_1276945) {
+			//	$out = $plugin->rdapExtensions($out, $namespace, $id, $obj, $query);
+			//}
+			$dir = $plugin->getPluginDirectory();
+			$file = rtrim($dir, '\\/ ').\DIRECTORY_SEPARATOR.'plugin.php';
+			if(file_exists($file)){
+				$pData = \get_file_data($file, ['Name'=>'Plugin Name', 'Author'=>'Author', 'Version'=>'Version', 'License'=>'License',]);
+			//	print_r($pData);
+				//die();
+				if(count($pData) >= 3){
+					$fn = include $file;
+					if(is_callable($fn)){
+						$Stubrunner->call($fn);
+					}
+				}
+			}
+			
+		}	
+		
+		//getUserDataDir(
+		//if(isset($_GET['test'])){
+			//die(OIDplus::getUserDataDir('plugins'));
+			foreach( array_merge(glob(OIDplus::getUserDataDir('plugins')."*.php"),
+								 glob(OIDplus::getUserDataDir('plugins')."/*/plugin.php")
+					) as $file){
+				$pData = \get_file_data($file, ['Name'=>'Plugin Name', 'Author'=>'Author', 'Version'=>'Version', 'License'=>'License',]);
+				if(count($pData) >= 3){
+					$fn = include $file;
+					if(is_callable($fn)){
+						$Stubrunner->call($fn);
+					}
+				}				
+			}
+	//	}
+		
+		return $Stubrunner;
+	}//webfatDoorKick
 				   
  }//class	 
 
