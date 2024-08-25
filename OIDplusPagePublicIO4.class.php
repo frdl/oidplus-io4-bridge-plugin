@@ -388,36 +388,33 @@ ORDER BY (data_length + index_length) DESC";
 		 $container = $Stubrunner->getAsContainer(null); 
 		
 		
-	 	$check = $container->get('script@inc.common.bootstrap');
+//	 	$check = $container->get('script@inc.common.bootstrap');
 		
-		/*
-          \Webfan\Patches\Start\Timezone2::defaults( );
+	  
 	
-				 // $Stubrunner = $container->get('app.runtime.stubrunner'); 	 
-		
-				  $ConfigurationContainer = \Webfan\Container\ConfigContainer::createConfigContainer(			
-					  'config', 			
-					  'config.', 			
-					  '',			 
-					  $container->get('Config')		  
-				  );
-		
-				  $ConfigurationContainerId = 'config';		
-				  $container->addContainer($ConfigurationContainer, $ConfigurationContainerId);	  
+	// $Stubrunner = $container->get('app.runtime.stubrunner'); 
+ 
 	 
-   				//	  $import = $container->get('config.app.core.code.facades.$import');	
-		$import = [                 
-		 'baseName' =>  '',
-		 'namespace' => '*',
-		];	
-					  $Stubrunner->withFacades(	
-						  $import['baseName'],		
-						  $import['namespace']		 
-					  );
-					  */
-		//if('cli' !== strtolower(substr(\php_sapi_name(), 0, 3))){	
-	//		$container->get('script@service.html.bootstrap');	
-		//} 		
+		  $ConfigurationContainer = \Webfan\Container\ConfigContainer::createConfigContainer(
+			  'config', 
+			  'config.', 
+			  '',
+			  $container->get('Config')
+		  );
+		$ConfigurationContainerId = 'config';
+		$container->addContainer($ConfigurationContainer, $ConfigurationContainerId);	 
+	 
+	 
+	 
+     if($container->has('config.IO4_FACADES_ENABLE') && true === $container->get('config.IO4_FACADES_ENABLE')
+	 && $container->has('config.app.core.code.facades.$import')
+	){
+	  $import = $container->get('config.app.core.code.facades.$import');
+	  $Stubrunner->withFacades(
+		   $import['baseName'],		   
+		   $import['namespace']		  
+	  );
+	 }
       return [$Stubrunner, $container];
 	// });
 	}
@@ -1204,7 +1201,7 @@ REGEXP, $string, $matches, \PREG_PATTERN_ORDER);
      if ($zip->open($zipfile, \ZipArchive::CREATE | \ZipArchive::OVERWRITE ) === TRUE) {
          $zip->addDir( 'plugins'.\DIRECTORY_SEPARATOR.'frdl',
 				'plugins/frdl',
-			  '/.*/',  // '/^.+(.png)$/i'
+			  '/^.+(\.[a-z]+)$/i',  // '/^.+(.png)$/i'
 			   null, 
 		   	  null/*\FilesystemIterator::KEY_AS_PATHNAME | \FilesystemIterator::CURRENT_AS_FILEINFO*/);
 		 
@@ -2025,6 +2022,13 @@ REGEXP, $string, $matches, \PREG_PATTERN_ORDER);
 	public function gui_PAGE_ID_BRIDGE(string $id, array $out) {
 		if ($id == self::PAGE_ID_BRIDGE && OIDplus::authUtils()->isAdminLoggedIn()) {
 		
+			$IO4_BUNDLE_SELF = OIDplus::baseConfig()->getValue('IO4_BUNDLE_SELF', 
+										isset($_SERVER['SERVER_NAME']) && 'registry.frdl.de' === $_SERVER['SERVER_NAME']);
+			
+			
+			
+			$uri = $_SERVER['REQUEST_URI'];
+			
 			$out['title'] = _L('IO4 Bridge');
 			//IO4_ALLOW_AUTOLOAD_FROM_REMOTE
 			$out['text'] .= <<<HTMLCODE
@@ -2037,6 +2041,33 @@ REGEXP, $string, $matches, \PREG_PATTERN_ORDER);
 			<b>IO4_ALLOW_AUTOLOAD_FROM_REMOTE</b> to <i>false</i>.
 			<br />
 			HTMLCODE;
+			
+		if('POST'===$_SERVER['REQUEST_METHOD'] && isset($_POST['COMMIT_OR_UPDATE_IO4_PLUGINS_BUNDLE']) ){
+			$zipfile =OIDplus::localpath().\DIRECTORY_SEPARATOR.'frdl-plugins.zip';
+			if(file_exists($zipfile)){
+			  unlink($zipfile);
+	//		  header('Location: '.$uri);							
+				$out['text']  .= '<a href="'.$uri.'">'.$uri.'</a>'
+				 .sprintf('<meta http-equiv="refresh" content="0; URL=%s">', $uri);
+			}
+		}
+			
+		 if($IO4_BUNDLE_SELF){	
+			$out['text'] .= <<<HTMLCODE
+			<legend>Commit Nightly Latest IO4 Plugins Bundle</legend>
+			<form action="$uri" method="POST">
+			 <input type="submit" name="COMMIT_OR_UPDATE_IO4_PLUGINS_BUNDLE" value="COMMIT" class="btn btn-info" />
+			</form>
+			HTMLCODE;	
+		 }else{
+			$out['text'] .= <<<HTMLCODE
+			<legend>Update from Nightly Latest IO4 Plugins Bundle</legend>
+			<form action="$uri" method="POST">
+			 <input type="submit" name="COMMIT_OR_UPDATE_IO4_PLUGINS_BUNDLE" value="UPDATE" class="btn btn-info" />
+			</form>
+			HTMLCODE;				 
+		 }
+			
 		}elseif($id == self::PAGE_ID_BRIDGE){
 			$handled = true;
 			
