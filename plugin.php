@@ -8,16 +8,15 @@
  * License: MIT
  */
 namespace Frdlweb\OIDplus\IO4\plugin;
-
-	use ViaThinkSoft\OIDplus\Core\OIDplus;
-	use ViaThinkSoft\OIDplus\Core\OIDplusConfig;
-	use ViaThinkSoft\OIDplus\Core\OIDplusException;
-	use ViaThinkSoft\OIDplus\Core\OIDplusObject;
-	use ViaThinkSoft\OIDplus\Core\OIDplusPagePluginPublic;
-	use ViaThinkSoft\OIDplus\Core\OIDplusPagePluginRa;
-	use ViaThinkSoft\OIDplus\Core\OIDplusPlugin;
- 
-    use Frdlweb\OIDplus\Plugins\AdminPages\IO4\OIDplusPagePublicIO4;
+	
+use ViaThinkSoft\OIDplus\Core\OIDplus;	
+use ViaThinkSoft\OIDplus\Core\OIDplusConfig;	
+use ViaThinkSoft\OIDplus\Core\OIDplusException;	
+use ViaThinkSoft\OIDplus\Core\OIDplusObject;	
+use ViaThinkSoft\OIDplus\Core\OIDplusPagePluginPublic;	
+use ViaThinkSoft\OIDplus\Core\OIDplusPagePluginRa;	
+use ViaThinkSoft\OIDplus\Core\OIDplusPlugin;   
+use Frdlweb\OIDplus\Plugins\AdminPages\IO4\OIDplusPagePublicIO4;
 
  function base64_url_encode($input) {
    return strtr(base64_encode($input), '+/=', '~_-');
@@ -73,8 +72,7 @@ namespace Frdlweb\OIDplus\IO4\plugin;
  
     return $content;
 }
-
-// header("Refresh:5; url=?goto=oidplus:system");
+ 
  function refresh_headér_shortcode($atts) {
     // Extract shortcode attributes
     $atts = shortcode_atts(
