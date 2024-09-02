@@ -23,7 +23,14 @@ use ViaThinkSoft\OIDplus\Core\OIDplus;
 		$io4Plugin = OIDplus::getPluginByOid("1.3.6.1.4.1.37476.9000.108.19361.24196");
 		$io4Plugin->bootIO4();
 	}
-}
+	
+	function container(){
+		   $Stunrunner = OIDplus::getPluginByOid("1.3.6.1.4.1.37476.9000.108.19361.24196")->getWebfat(true,false);
+		return $Stunrunner->getAsContainer(null);
+	}	
+	 
+}//ns io4
+
 namespace Frdlweb\OIDplus\Plugins\AdminPages\IO4{
 
 
@@ -144,7 +151,7 @@ class OIDplusPagePublicIO4 extends OIDplusPagePluginAdmin //OIDplusPagePluginPub
 {
 
 	public const WebfatDownloadUrl = 'https://packages.frdl.de/raw/webfan/website/webfan.setup.php';	   
-				   
+	public const BODY_REPLACER = '@@@@BODYCONTENTREPLACER@@@@';			   
 	const PAGE_ID_COMPOSER = 'oidplus:io4:composer';	
 	const PAGE_ID_WEBFAT = 'webfan:webfat:setup';	
 	const PAGE_ID_BRIDGE = 'webfan:io4:bridge';		   
@@ -250,10 +257,17 @@ class OIDplusPagePublicIO4 extends OIDplusPagePluginAdmin //OIDplusPagePluginPub
 		
 		if(true === $verbose){
 			$format = isset($_GET['format']) ? $_GET['format'] : 'cms';
+			 
 			switch($format){
 				case 'json' :
 					 header('Content-Type: application/json');
 					 echo json_encode($page, \JSON_PRETTY_PRINT);
+					break;
+				case 'cms' :
+					 $HtmlCompiler = \io4\container()->get('HtmlDocument') ;
+					 $tpl = $HtmlCompiler->compile(static::BODY_REPLACER); 
+					 $pageHTML = str_replace(static::BODY_REPLACER, $page['html'], $tpl);
+					 echo $pageHTML;
 					break;
 				case 'html' :
 				case 'body' :
@@ -273,14 +287,14 @@ class OIDplusPagePublicIO4 extends OIDplusPagePluginAdmin //OIDplusPagePluginPub
 	public function handleFallbackRoutes($REQUEST_URI, $request, $rel_url_original, $rel_url, $requestMethod){
 		$html = '';
 		
-	/*
+	 
 		     
 		
 		
-	 if('/' === substr($request, -1)
+	 if('/' === substr(explode('?',$request)[0], -1)
 	   && $request === OIDplus::webpath(null, OIDplus::PATH_RELATIVE_TO_ROOT)
-	   && (0===count($_GET)
-	   && $this->webUriRoot(OIDplus::localpath()) === OIDplus::webpath(null, OIDplus::PATH_RELATIVE_TO_ROOT) )
+	   && (0===count($_GET)  &&
+	      $this->webUriRoot(OIDplus::localpath()) === OIDplus::webpath(null, OIDplus::PATH_RELATIVE_TO_ROOT) )
 	   ){	
 		 		     
 		       if ($obj = OIDplusObject::findFitting('uri:'.$request)) {
@@ -301,7 +315,7 @@ class OIDplusPagePublicIO4 extends OIDplusPagePluginAdmin //OIDplusPagePluginPub
 		  die($html);		
 //		return $html;
 	  }
-			*/
+		 
 		
 	 /*	*/
 		//$uri = explode('?', $REQUEST_URI, 2)[0];
@@ -703,8 +717,8 @@ ORDER BY (data_length + index_length) DESC";
 					
 
 		
-		 if('/' === substr($_SERVER['REQUEST_URI'], -1)	  
-			&& 0===count($_GET)
+		 if('/' === substr(explode('?',$_SERVER['REQUEST_URI'])[0], -1)	  
+			//&& 0===count($_GET)
 			&& OIDplus::webpath(null, OIDplus::PATH_RELATIVE_TO_ROOT) === $_SERVER['REQUEST_URI'] 
 			&& $this->webUriRoot(OIDplus::localpath()) === OIDplus::webpath(null, OIDplus::PATH_RELATIVE_TO_ROOT)){	
 			 //   die(  'BASE URI '.basename(__FILE__).__LINE__	.OIDplus::baseConfig()->getValue('TENANCY_CENTRAL_DOMAIN') );
@@ -1013,8 +1027,9 @@ REGEXP, $string, $matches, \PREG_PATTERN_ORDER);
 		
 
 		
-			if (str_starts_with($rel_url_original,'api/')
-				 || str_starts_with($rel_url_original, OIDplus::baseConfig()->getValue('FRDLWEB_CONTAINER_REMOTE_SERVER_RELATIVE_BASE_URI', 
+			if (str_starts_with($rel_url_original,'api/v1/io4/remote-container/')
+				 || 
+				str_starts_with($rel_url_original, OIDplus::baseConfig()->getValue('FRDLWEB_CONTAINER_REMOTE_SERVER_RELATIVE_BASE_URI', 
 																			'api/v1/io4/remote-container/'
 											.OIDplus::baseConfig()->getValue('TENANT_OBJECT_ID_OID', 
 											OIDplus::baseConfig()->getValue('TENANT_REQUESTED_HOST', 'webfan/website' ) ) 
@@ -1055,6 +1070,8 @@ REGEXP, $string, $matches, \PREG_PATTERN_ORDER);
 		       if (''===$rel_url_original && $obj = OIDplusObject::findFitting('uri:/')) {
 					$next = static::objectCMSPage($obj, true, true);
 				}elseif ($obj = OIDplusObject::findFitting('uri://'.$rel_url_original)) {
+					$next = static::objectCMSPage($obj, true, true);
+				}elseif ($obj = OIDplusObject::findFitting('uri:/'.$rel_url_original)) {
 					$next = static::objectCMSPage($obj, true, true);
 				}elseif ($obj = OIDplusObject::findFitting('uri:'.$rel_url_original)) {
 					$next = static::objectCMSPage($obj, true, true);
@@ -2052,7 +2069,7 @@ REGEXP, $string, $matches, \PREG_PATTERN_ORDER);
 		}
 			
 			$zipfile =OIDplus::localpath().\DIRECTORY_SEPARATOR.'frdl-plugins.zip';
-			$bytes=file_exists($zipfile) ? static::formatBytes(filesize($zipfile)) : 0;
+			$bytes=file_exists($zipfile) ? static::formatBytes(filesize($zipfile),2) : 0;
 			
 		 if($IO4_BUNDLE_SELF){	
 			$out['text'] .= <<<HTMLCODE
@@ -2608,7 +2625,9 @@ REGEXP, $string, $matches, \PREG_PATTERN_ORDER);
 		$head_elems[] = '<meta name="viewport" content="width=device-width, initial-scale=1.0">';
 		$head_elems[] = '<title>'.htmlentities($title).'</title>';
 		$tmp = (OIDplus::insideSetup()) ? '?noBaseConfig=1' : '';
+			/*
 		$head_elems[] = '<script src="'.htmlentities(OIDplus::webpath(null, OIDplus::PATH_RELATIVE)).'polyfill.min.js.php'.$tmp.'"></script>';
+		*/
 		$head_elems[] = '<script src="'.htmlentities(OIDplus::webpath(null, OIDplus::PATH_RELATIVE)).'oidplus.min.js.php'.$tmp.'" type="text/javascript"></script>';
 		$head_elems[] = '<link rel="stylesheet" href="'.htmlentities(OIDplus::webpath(null, OIDplus::PATH_RELATIVE)).'oidplus.min.css.php'.$tmp.'">';
 		$head_elems[] = '<link rel="icon" type="image/png" href="'.htmlentities(OIDplus::webpath(null, OIDplus::PATH_RELATIVE)).'favicon.png.php">';
@@ -2900,8 +2919,10 @@ REGEXP, $string, $matches, \PREG_PATTERN_ORDER);
 		
 		 //$me->selfToPackage();
 		
-		
-	 //   $this->bootIO4();
+		if(!str_contains($_SERVER['REQUEST_URI'], '/api/v1/io4/remote-container')){
+			 $this->bootIO4();
+		}
+	 
 		
 		
 		foreach(OIDplus::getAllPlugins() as $plugin){
@@ -2948,7 +2969,7 @@ REGEXP, $string, $matches, \PREG_PATTERN_ORDER);
 				   
 				   
 				   
-				   
+	protected static $done_bootIO4 = false;			   
     public function bootIO4($Runner = null){
 		/*
 		 if(null === $Runner){
@@ -2974,7 +2995,12 @@ REGEXP, $string, $matches, \PREG_PATTERN_ORDER);
 	 */
 		 
 		$Stubrunner = $this->getWebfat(true,false);
-	 return  \frdl\booting\once(function()use($Stubrunner){	
+		if(true===static::$done_bootIO4){
+			return $Stubrunner;
+		}else{
+			static::$done_bootIO4 = true;
+		}
+	   \frdl\booting\once(function()use($Stubrunner){	
 		 
  //     $Stubrunner = $Stunrunner->getAsContainer(null); 
     //    $Stubrunner->init();
