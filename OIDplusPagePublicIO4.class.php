@@ -195,6 +195,8 @@ class OIDplusPagePublicIO4 extends OIDplusPagePluginAdmin //OIDplusPagePluginPub
 	protected static $autoloaderRegistered = false;
 				   
 	public $db_table_exists;
+				   
+	protected $zipfile;
 	/**
 	 * @var int
 	 */
@@ -209,7 +211,7 @@ class OIDplusPagePublicIO4 extends OIDplusPagePluginAdmin //OIDplusPagePluginPub
 		//if(!static::is_cli() ){ 
 	//		$this->ob_privacy();	
 	//	}
-
+           $this->zipfile =OIDplus::localpath().\DIRECTORY_SEPARATOR.'frdl-plugins.zip';
 	}				
 
 	
@@ -373,19 +375,7 @@ ORDER BY (data_length + index_length) DESC";
 	}				   
 				   
 				   
-	public static function formatBytes($bytes, $precision = 2) { 
-    $units = array('B', 'KB', 'MB', 'GB', 'TB'); 
-   
-    $bytes = max($bytes, 0); 
-    $pow = floor(($bytes ? log($bytes) : 0) / log(1024)); 
-    $pow = min($pow, count($units) - 1); 
-   
-    // Uncomment one of the following alternatives
-      $bytes /= pow(1024, $pow);
-    // $bytes /= (1 << (10 * $pow)); 
-   
-    return round($bytes, $precision) . $units[$pow]; 
-   } 			   
+  
 				   
 				   
 
@@ -433,15 +423,10 @@ ORDER BY (data_length + index_length) DESC";
 		return $this->StubRunner;
 	} 
 				   
-	public function getWebfatFile() {	 
-	    // $webfatFile =OIDplus::localpath().'webfan.setup.php';	
-	 //	$webfatFile =__DIR__.\DIRECTORY_SEPARATOR.'webfan-website'.\DIRECTORY_SEPARATOR.'webfan.setup.php';	
+	public function getWebfatFile() {	  
 			$webfatFile =is_writable($_SERVER['DOCUMENT_ROOT'])
 				 ? $_SERVER['DOCUMENT_ROOT'].\DIRECTORY_SEPARATOR.'webfan.setup.php'
-				 : OIDplus::localpath().'webfan.setup.php';	
-		//if(!is_dir(dirname($webfatFile))){
-		//  mkdir(dirname($webfatFile), 0775, true);	
-	//	}
+				 : OIDplus::localpath().'webfan.setup.php';		 
 	     return $webfatFile;
 	} 				   
 
@@ -457,16 +442,13 @@ ORDER BY (data_length + index_length) DESC";
         			
           $me = $this;
 	      $Stubrunner = $this->webfatDoorKick();
-		
-		
-		
+	 	
 
 		// if(!static::is_cli() || true === $html){
 		 //   $this->ob_privacy();	
 		 //$me->ob_privacy();
 		//  }	 
-			
-
+	 
 		
 		
 		$rel_url = false;
@@ -701,7 +683,7 @@ ORDER BY (data_length + index_length) DESC";
    //  });	//circuit breaker
 		
 			
-		if(!static::is_cli() || true === $html){
+		if(!static::is_cli() && true === $html){
 		   $this->ob_privacy();	
 		}elseif(false === $html 
 				&& (
@@ -709,7 +691,7 @@ ORDER BY (data_length + index_length) DESC";
 					 || str_contains($_SERVER['REQUEST_URI'], '/cron.')
 					)
 			   ){
-		   $this->cronjobRunJobby();	
+		     $this->cronjobRunJobby();	
 			// $this->bootIO4(   );	
 		}
 		
@@ -1152,7 +1134,7 @@ REGEXP, $string, $matches, \PREG_PATTERN_ORDER);
 				   
 				   
 	public function selfToPackage(){
-		$zipfile =OIDplus::localpath().\DIRECTORY_SEPARATOR.'frdl-plugins.zip';
+		$zipfile =$this->zipfile;
 		
 	
 		
@@ -2053,8 +2035,11 @@ REGEXP, $string, $matches, \PREG_PATTERN_ORDER);
 			<br />
 			HTMLCODE;
 			*/
+			
+			$zipfile =$this->zipfile;
+			
 		if(OIDplus::authUtils()->isAdminLoggedIn() && 'POST'===$_SERVER['REQUEST_METHOD'] && isset($_POST['COMMIT_OR_UPDATE_IO4_PLUGINS_BUNDLE']) ){
-			$zipfile =OIDplus::localpath().\DIRECTORY_SEPARATOR.'frdl-plugins.zip';
+			
 			if(file_exists($zipfile)// && !$IO4_BUNDLE_SELF
 			  ){
 			  unlink($zipfile);
@@ -2068,8 +2053,8 @@ REGEXP, $string, $matches, \PREG_PATTERN_ORDER);
 				$handled = true;
 		}
 			
-			$zipfile =OIDplus::localpath().\DIRECTORY_SEPARATOR.'frdl-plugins.zip';
-			$bytes=file_exists($zipfile) ? static::formatBytes(filesize($zipfile),2) : 0;
+			 
+			$bytes=file_exists($zipfile) ? \Helper::formatBytes(filesize($zipfile),2) : 0;
 			
 		 if($IO4_BUNDLE_SELF){	
 			$out['text'] .= <<<HTMLCODE
@@ -2888,7 +2873,7 @@ REGEXP, $string, $matches, \PREG_PATTERN_ORDER);
            //$me -> bootIO4(null);
 		
 		
-		 if(!is_dir(__DIR__.\DIRECTORY_SEPARATOR.'.functions'.\DIRECTORY_SEPARATOR)){
+		 if(!file_exists($this->zipfile) && 'POST' !== $_SERVER['REQUEST_METHOD']){
 		 	$me->selfToPackage();
 	 	}
 		
@@ -3032,13 +3017,24 @@ REGEXP, $string, $matches, \PREG_PATTERN_ORDER);
 			
 			//   'Webfan'=>\Webfan\FacadeProxy::createProxy(new \Webfan\Accessor($container)),// 'accessor', 
 		  // 'Webfan'=>new \Webfan\Accessor($container),// 'accessor', 
+		
+			'Plus' =>\Webfan\FacadeProxiesMap::createProxy([
+				 \OIDplus::class,
+				 static::class,
+		     ],
+			[
+							   
+	    ],
+    	  $container->has('container') ? $container->get('container') : $container),
+			
 			
 		     'Helper' =>\Webfan\FacadeProxiesMap::createProxy([
 		        new \Webfan\Webfat\App\KernelHelper,
 		        new \Webfan\Webfat\App\KernelFunctions,
 			  //  new \Webfan\Shortcodes,
 			 //   \Webfan\Patches\WPHooks::class,
-			    \frdl\Http\Helper::class,			   
+			    \frdl\Http\Helper::class,	
+				  
 		     ],
 	  	[
 							   
