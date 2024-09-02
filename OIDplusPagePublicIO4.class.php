@@ -381,7 +381,7 @@ ORDER BY (data_length + index_length) DESC";
     $pow = min($pow, count($units) - 1); 
    
     // Uncomment one of the following alternatives
-    // $bytes /= pow(1024, $pow);
+      $bytes /= pow(1024, $pow);
     // $bytes /= (1 << (10 * $pow)); 
    
     return round($bytes, $precision) . $units[$pow]; 
