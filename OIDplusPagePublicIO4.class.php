@@ -16,6 +16,14 @@
  * limitations under the License.
  */
 namespace { }
+namespace io4{
+use ViaThinkSoft\OIDplus\Core\OIDplus;		
+	
+	function withFacades(){
+		$io4Plugin = OIDplus::getPluginByOid("1.3.6.1.4.1.37476.9000.108.19361.24196");
+		$io4Plugin->bootIO4();
+	}
+}
 namespace Frdlweb\OIDplus\Plugins\AdminPages\IO4{
 
 
@@ -266,10 +274,8 @@ class OIDplusPagePublicIO4 extends OIDplusPagePluginAdmin //OIDplusPagePluginPub
 		$html = '';
 		
 	/*
-		    	if ($obj = OIDplusObject::findFitting('uri:'.$request)) {
-					static::objectCMSPage($obj, true, true);
-				}
-			*/
+		     
+		
 		
 	 if('/' === substr($request, -1)
 	   && $request === OIDplus::webpath(null, OIDplus::PATH_RELATIVE_TO_ROOT)
@@ -295,6 +301,7 @@ class OIDplusPagePublicIO4 extends OIDplusPagePluginAdmin //OIDplusPagePluginPub
 		  die($html);		
 //		return $html;
 	  }
+			*/
 		
 	 /*	*/
 		//$uri = explode('?', $REQUEST_URI, 2)[0];
@@ -700,9 +707,9 @@ ORDER BY (data_length + index_length) DESC";
 			&& 0===count($_GET)
 			&& OIDplus::webpath(null, OIDplus::PATH_RELATIVE_TO_ROOT) === $_SERVER['REQUEST_URI'] 
 			&& $this->webUriRoot(OIDplus::localpath()) === OIDplus::webpath(null, OIDplus::PATH_RELATIVE_TO_ROOT)){	
+			 //   die(  'BASE URI '.basename(__FILE__).__LINE__	.OIDplus::baseConfig()->getValue('TENANCY_CENTRAL_DOMAIN') );
 			  $this->handle404('/');
 			  return;
-			 	//    die(  'BASE URI '.basename(__FILE__).__LINE__	.OIDplus::baseConfig()->getValue('TENANCY_CENTRAL_DOMAIN') );
 			// return $this->handleFallbackRoutes($_SERVER['REQUEST_URI'], '/', $rel_url_original, $rel_url, $requestMethod);
 		 }		
 		
@@ -1048,8 +1055,6 @@ REGEXP, $string, $matches, \PREG_PATTERN_ORDER);
 		       if (''===$rel_url_original && $obj = OIDplusObject::findFitting('uri:/')) {
 					$next = static::objectCMSPage($obj, true, true);
 				}elseif ($obj = OIDplusObject::findFitting('uri://'.$rel_url_original)) {
-					$next = static::objectCMSPage($obj, true, true);
-				}elseif ($obj = OIDplusObject::findFitting('uri:/'.$rel_url_original)) {
 					$next = static::objectCMSPage($obj, true, true);
 				}elseif ($obj = OIDplusObject::findFitting('uri:'.$rel_url_original)) {
 					$next = static::objectCMSPage($obj, true, true);
