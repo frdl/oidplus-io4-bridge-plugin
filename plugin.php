@@ -7,7 +7,9 @@
  * Author URI: https://frdl.de
  * License: MIT
  */
-namespace Frdlweb\OIDplus\IO4\plugin;
+
+
+namespace Frdlweb\OIDplus\IO4\plugin{
 	
 use ViaThinkSoft\OIDplus\Core\OIDplus;	
 use ViaThinkSoft\OIDplus\Core\OIDplusConfig;	
@@ -135,12 +137,74 @@ function io4_plugin_admin_pages_tree(?string $ra_mail = null){
 }
 
 
+
+function public_pages_tree(?string $ra_mail){
+	  global $oidplus_public_pages_tree_json;
+	 
+ 
+	
+	$json =$oidplus_public_pages_tree_json;
+		$Array = (new \Wehowski\Helpers\ArrayHelper($json)) ;
+	
+		 
+	 
+		$Array
+			//->after(1)
+			->add([
+		    'id' => 'oidplus:webfan_registry_hosting',
+		 	'icon' => 'https://webfan.de/favicon.ico',
+			 'a_attr'=>[
+			 	 'href'=>'https://webfan.de/admin/registry/?host='.urlencode($_SERVER['HTTP_HOST']),
+			 ],
+			 //  //'href'=>OIDplus::webpath(null,OIDplus::PATH_ABSOLUTE_CANONICAL),
+			'text' => _L('OID & Registry Hosting'),
+	   ]);
+	
+	  
+
+ 
+	$json = $Array->all();
+	$oidplus_public_pages_tree_json = $json; 
+}
+
+
+
+
+function public_pages_gui(?string $id = null){
+	  global $oidplus_public_pages_gui_out;
+	  global $oidplus_public_pages_gui_handled;
+	
+	 
+		 if('oidplus:webfan_registry_hosting'===$id){	 
+			 $oidplus_public_pages_gui_handled = true;
+			 $oidplus_public_pages_gui_out['title'] =  'OID Hosting';
+			 $homelink ='https://webfan.de/admin/registry/?host='.urlencode($_SERVER['HTTP_HOST']);
+			 $oidplus_public_pages_gui_out['text']  .= '<a href="'.$homelink.'">'.$homelink.'</a>'
+				 .sprintf('<meta http-equiv="refresh" content="0; URL=%s">', $homelink);
+
+			 $oidplus_public_pages_gui_out['icon'] = 'https://webfan.de/favicon.ico'; 
+		 }	 
+		
+}
+
 // Shortcode
 //add_shortcode('markdown', __NAMESPACE__.'\markdown');
 add_shortcode('RefreshHeader', __NAMESPACE__.'\refresh_headér_shortcode');
 add_shortcode('ObjectRepositoryLink', __NAMESPACE__.'\object_repository_link');
 add_shortcode('ListAllShortcodes', '\display_shortcodes');
 
+add_action(
+		'oidplus_public_pages_tree',
+		__NAMESPACE__.'\public_pages_tree',
+		0//,
+		//string $include_path = null,
+	);
+add_action(
+		'oidplus_public_pages_gui',
+		__NAMESPACE__.'\public_pages_gui',
+		0//,
+		//string $include_path = null,
+	);
 
 add_action(
 		'oidplus_admin_pages_tree',
@@ -152,4 +216,8 @@ add_action(
 //you can use autowiring as from container->invoker->call( \callable | closure(autowired arguments), [parameters]) !!!
 return (function($container){
 	//print_r(get_class($container));
+	// \Webfan\Patches\Start\Timezone2::defaults( );
+	
 });
+	
+}//namespace of the plugin
