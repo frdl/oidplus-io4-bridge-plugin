@@ -987,11 +987,7 @@ REGEXP, $string, $matches, \PREG_PATTERN_ORDER);
      *  @ToDO ??? : Use PSR Standards? https://registry.frdl.de/?goto=php%3APsr%5CHttp%5CServer
 	 */
 	public function handle404(string $request): bool {
-		global $oidplus_handle_404_request;
-		global $oidplus_handle_404_rel_url_original;
-			
-		
-		
+ 
 		 if(!static::is_cli() ){ 
 		 	$this->ob_privacy();	
 		 }
@@ -1047,23 +1043,7 @@ REGEXP, $string, $matches, \PREG_PATTERN_ORDER);
 			}
 		}	
 			
-		
-		
-		
-
-			
-
-		 $oidplus_handle_404_request = $request;
-		 $oidplus_handle_404_rel_url_original = $rel_url_original;	
-		  if(function_exists('did_action') && !did_action('oidplus_handle_404')){
-			  do_action('oidplus_handle_404', [$rel_url_original,$request]);
-		  }		
-		 $request = $oidplus_handle_404_request;
-		 $rel_url_original = $oidplus_handle_404_rel_url_original;
-			 
-		unset($oidplus_handle_404_request);
-		unset($oidplus_handle_404_rel_url_original);
-		
+ 	
 		 $args = [$_SERVER['REQUEST_URI'], $request, $rel_url_original, $rel_url, $requestMethod];
 		$next = \call_user_func_array([$this, 'handleFallbackRoutes'], $args);
 		     			 
