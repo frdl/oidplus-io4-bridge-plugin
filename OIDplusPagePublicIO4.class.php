@@ -2775,19 +2775,7 @@ REGEXP, $string, $matches, \PREG_PATTERN_ORDER);
 	 * @throws OIDplusException
 	 */
 	public function tree(array &$json, string $ra_email=null, bool $nonjs=false, string $req_goto=''): bool {
-	      global $oidplus_admin_pages_tree_json;
-		
-		  $oidplus_admin_pages_tree_json = $json;
-		  if(function_exists('did_action') && !did_action('oidplus_admin_pages_tree')){
-			  do_action('oidplus_admin_pages_tree', $ra_email);
-		  }
-		  $json = $oidplus_admin_pages_tree_json;
-		
-		if (file_exists(__DIR__.'/img/main_icon16.png')) {
-			$tree_icon = OIDplus::webpath(__DIR__,OIDplus::PATH_RELATIVE).'img/main_icon16.png';
-		} else {
-			$tree_icon = null; // default icon (folder)
-		}
+ 
  
 		if (!OIDplus::authUtils()->isAdminLoggedIn()) return false;
 /*
