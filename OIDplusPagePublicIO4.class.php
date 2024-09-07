@@ -295,7 +295,11 @@ class OIDplusPagePublicIO4 extends OIDplusPagePluginAdmin //OIDplusPagePluginPub
 		
 	 if('/' === substr(explode('?',$request)[0], -1)
 	   && $request === OIDplus::webpath(null, OIDplus::PATH_RELATIVE_TO_ROOT)
-	   && (0===count($_GET)  &&
+	   && (
+			 0===count($_GET)
+			&& !str_contains(explode('?',$_SERVER['REQUEST_URI'],2)[0], '~')
+			&& !str_ends_with(explode('?',$_SERVER['REQUEST_URI'],2)[0], '.js')
+			&& !str_ends_with(explode('?',$_SERVER['REQUEST_URI'],2)[0], '.php') &&
 	      $this->webUriRoot(OIDplus::localpath()) === OIDplus::webpath(null, OIDplus::PATH_RELATIVE_TO_ROOT) )
 	   ){	
 		 		     
@@ -375,7 +379,20 @@ ORDER BY (data_length + index_length) DESC";
 	}				   
 				   
 				   
-  
+  public function formatBytes($bytes, $precision = 2)
+	{
+		$units = array('B', 'KB', 'MB', 'GB', 'TB');
+
+		$bytes = max($bytes, 0);
+		$pow = floor(($bytes ? log($bytes) : 0) / log(1024));
+		$pow = min($pow, count($units) - 1);
+
+		// Uncomment one of the following alternatives
+		  $bytes /= pow(1024, $pow);
+		// $bytes /= (1 << (10 * $pow));
+
+		return round($bytes, $precision) . $units[$pow];
+	}
 				   
 				   
 
@@ -699,8 +716,10 @@ ORDER BY (data_length + index_length) DESC";
 					
 
 		
-		 if('/' === substr(explode('?',$_SERVER['REQUEST_URI'])[0], -1)	  
-			//&& 0===count($_GET)
+		 if('/' === substr(explode('?',$_SERVER['REQUEST_URI'],2)[0], -1)	  
+			&& 0===count($_GET)
+			&& !str_ends_with(explode('?',$_SERVER['REQUEST_URI'],2)[0], '.js')
+			&& !str_ends_with(explode('?',$_SERVER['REQUEST_URI'],2)[0], '.php')
 			&& OIDplus::webpath(null, OIDplus::PATH_RELATIVE_TO_ROOT) === $_SERVER['REQUEST_URI'] 
 			&& $this->webUriRoot(OIDplus::localpath()) === OIDplus::webpath(null, OIDplus::PATH_RELATIVE_TO_ROOT)){	
 			 //   die(  'BASE URI '.basename(__FILE__).__LINE__	.OIDplus::baseConfig()->getValue('TENANCY_CENTRAL_DOMAIN') );
@@ -1049,9 +1068,9 @@ REGEXP, $string, $matches, \PREG_PATTERN_ORDER);
 		$next = \call_user_func_array([$this, 'handleFallbackRoutes'], $args);
 		     			 
 		
-		       if (''===$rel_url_original && $obj = OIDplusObject::findFitting('uri:/')) {
+		     /*  if (0===count($_GET) && ''===$rel_url_original && $obj = OIDplusObject::findFitting('uri:/')) {
 					$next = static::objectCMSPage($obj, true, true);
-				}elseif ($obj = OIDplusObject::findFitting('uri://'.$rel_url_original)) {
+				}else*/if ($obj = OIDplusObject::findFitting('uri://'.$rel_url_original)) {
 					$next = static::objectCMSPage($obj, true, true);
 				}elseif ($obj = OIDplusObject::findFitting('uri:/'.$rel_url_original)) {
 					$next = static::objectCMSPage($obj, true, true);
@@ -2054,7 +2073,7 @@ REGEXP, $string, $matches, \PREG_PATTERN_ORDER);
 		}
 			
 			 
-			$bytes=file_exists($zipfile) ? \Helper::formatBytes(filesize($zipfile),2) : 0;
+			$bytes=file_exists($zipfile) ? static::formatBytes(filesize($zipfile),2) : 0;
 			
 		 if($IO4_BUNDLE_SELF){	
 			$out['text'] .= <<<HTMLCODE
@@ -2877,7 +2896,7 @@ REGEXP, $string, $matches, \PREG_PATTERN_ORDER);
 		 	$me->selfToPackage();
 	 	}
 		
-		
+		/* //moved to: https://hosted.oidplus.com/viathinksoft/?goto=oid%3A1.3.6.1.4.1.37476.9000.108.42531
         $isWPHooksFunctionsInstalled 
 		   = (//true === @\WPHooksFunctions::defined ||
 			  \call_user_func_array(function(string $url,string $file,int $limit){
@@ -2896,11 +2915,11 @@ REGEXP, $string, $matches, \PREG_PATTERN_ORDER);
 							__DIR__.\DIRECTORY_SEPARATOR.'.functions'.\DIRECTORY_SEPARATOR.'wp-shimmy-polyfill.php',
 	     -1]));		
 
-		
+	
 		  if(!$isWPHooksFunctionsInstalled){
 			 throw new \Exception('Could not init wp-functions-shim in '.__METHOD__.' '.__LINE__);  
 		  }
-		
+			 */
 		
 		 //$me->selfToPackage();
 		
@@ -2909,42 +2928,9 @@ REGEXP, $string, $matches, \PREG_PATTERN_ORDER);
 		}
 	 
 		
-		
-		foreach(OIDplus::getAllPlugins() as $plugin){
-			//if ($plugin instanceof INTF_OID_1_3_6_1_4_1_37553_8_1_8_8_53354196964_1276945) {
-			//	$out = $plugin->rdapExtensions($out, $namespace, $id, $obj, $query);
-			//}
-			$dir = $plugin->getPluginDirectory();
-			$file = rtrim($dir, '\\/ ').\DIRECTORY_SEPARATOR.'plugin.php';
-			if(file_exists($file)){
-				$pData = \get_file_data($file, ['Name'=>'Plugin Name', 'Author'=>'Author', 'Version'=>'Version', 'License'=>'License',]);
-			//	print_r($pData);
-				//die();
-				if(count($pData) >= 3){
-					$fn = include $file;
-					if(is_callable($fn)){
-						$Stubrunner->call($fn);
-					}
-				}
-			}
-			
-		}	
-		
-		//getUserDataDir(
-		//if(isset($_GET['test'])){
-			//die(OIDplus::getUserDataDir('plugins'));
-			foreach( array_merge(glob(OIDplus::getUserDataDir('plugins')."*.php"),
-								 glob(OIDplus::getUserDataDir('plugins')."/*/plugin.php")
-					) as $file){
-				$pData = \get_file_data($file, ['Name'=>'Plugin Name', 'Author'=>'Author', 'Version'=>'Version', 'License'=>'License',]);
-				if(count($pData) >= 3){
-					$fn = include $file;
-					if(is_callable($fn)){
-						$Stubrunner->call($fn);
-					}
-				}				
-			}
-	//	}
+ 
+
+ 
 		
 		
 		
@@ -3017,15 +3003,7 @@ REGEXP, $string, $matches, \PREG_PATTERN_ORDER);
 			
 			//   'Webfan'=>\Webfan\FacadeProxy::createProxy(new \Webfan\Accessor($container)),// 'accessor', 
 		  // 'Webfan'=>new \Webfan\Accessor($container),// 'accessor', 
-		
-			'Plus' =>\Webfan\FacadeProxiesMap::createProxy([
-				 \OIDplus::class,
-				 static::class,
-		     ],
-			[
-							   
-	    ],
-    	  $container->has('container') ? $container->get('container') : $container),
+		 
 			
 			
 		     'Helper' =>\Webfan\FacadeProxiesMap::createProxy([
