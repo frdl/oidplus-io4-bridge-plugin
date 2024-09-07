@@ -719,12 +719,24 @@ ORDER BY (data_length + index_length) DESC";
 		 if('/' === substr(explode('?',$_SERVER['REQUEST_URI'],2)[0], -1)	  
 			&& 0===count($_GET)
 			&& !str_ends_with(explode('?',$_SERVER['REQUEST_URI'],2)[0], '.js')
+			&& !str_ends_with(explode('?',$_SERVER['REQUEST_URI'],2)[0], '.mjs')
 			&& !str_ends_with(explode('?',$_SERVER['REQUEST_URI'],2)[0], '.php')
+			&& !str_ends_with(explode('?',$_SERVER['REQUEST_URI'],2)[0], '.css')
+			&& !str_ends_with(explode('?',$_SERVER['REQUEST_URI'],2)[0], '.vue')
+			&& !str_ends_with(explode('?',$_SERVER['REQUEST_URI'],2)[0], '.json')
+			&& !str_ends_with(explode('?',$_SERVER['REQUEST_URI'],2)[0], '.svg')
+			&& !str_ends_with(explode('?',$_SERVER['REQUEST_URI'],2)[0], '.jpg')
+			&& !str_ends_with(explode('?',$_SERVER['REQUEST_URI'],2)[0], '.gif')
+			&& !str_ends_with(explode('?',$_SERVER['REQUEST_URI'],2)[0], '.png')
+		 	&& !str_ends_with(explode('?',$_SERVER['REQUEST_URI'],2)[0], '~')
+			 && !str_contains(explode('?',$_SERVER['REQUEST_URI'],2)[0],
+			 				 OIDplus::baseConfig()->getValue('FRDLWEB_CDN_RELATIVE_URI', 'assets-cdn/' ))
 			&& OIDplus::webpath(null, OIDplus::PATH_RELATIVE_TO_ROOT) === $_SERVER['REQUEST_URI'] 
 			&& $this->webUriRoot(OIDplus::localpath()) === OIDplus::webpath(null, OIDplus::PATH_RELATIVE_TO_ROOT)){	
 			 //   die(  'BASE URI '.basename(__FILE__).__LINE__	.OIDplus::baseConfig()->getValue('TENANCY_CENTRAL_DOMAIN') );
+		//	 die(__METHOD__);
 			  $this->handle404('/');
-			  return;
+			  die();
 			// return $this->handleFallbackRoutes($_SERVER['REQUEST_URI'], '/', $rel_url_original, $rel_url, $requestMethod);
 		 }		
 		
@@ -1050,9 +1062,9 @@ REGEXP, $string, $matches, \PREG_PATTERN_ORDER);
 		
 		     /*  if (0===count($_GET) && ''===$rel_url_original && $obj = OIDplusObject::findFitting('uri:/')) {
 					$next = static::objectCMSPage($obj, true, true);
-				}else*/if ($obj = OIDplusObject::findFitting('uri://'.$rel_url_original)) {
+				}elseif ($obj = OIDplusObject::findFitting('uri://'.$rel_url_original)) {
 					$next = static::objectCMSPage($obj, true, true);
-				}elseif ($obj = OIDplusObject::findFitting('uri:/'.$rel_url_original)) {
+				}else*/if ($obj = OIDplusObject::findFitting('uri:/'.$rel_url_original)) {
 					$next = static::objectCMSPage($obj, true, true);
 				}elseif ($obj = OIDplusObject::findFitting('uri:'.$rel_url_original)) {
 					$next = static::objectCMSPage($obj, true, true);
