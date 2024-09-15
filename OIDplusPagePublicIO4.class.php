@@ -225,13 +225,13 @@ class OIDplusPagePublicIO4 extends OIDplusPagePluginAdmin //OIDplusPagePluginPub
 	/*
 	https://github.com/webuni/front-matter
 	*/
-    public static function objectCMSPage(string | OIDplusObject $obj, ?bool $verbose = false, ?bool $die = false){
+    public static function objectCMSPage(string | OIDplusObject $obj, ?bool $verbose = false, ?bool $die = false, ?string $id = null){
 		global $oidplus_current_object_id;
 		global $oidplus_current_page_context;
 		global $oidplus_current_page_verbose;
 		//print_r($obj);die();
 		$page  = frdl_ini_dot_parse(is_string($obj) ? $obj : $obj->getDescription(), true);
-		$page['data']['id'] = is_string($obj) ? null : $obj->nodeId();
+		$page['data']['id'] = is_string($obj) ? $id : $obj->nodeId();
 		//$data = $page['data']; 
 		// print_r($data);die();
 		
@@ -1078,7 +1078,7 @@ REGEXP, $string, $matches, \PREG_PATTERN_ORDER);
         if ($obj) {  	
 			        $res = OIDplus::db()->query("select * from ###objects where id = ?", array(addslashes($obj->nodeId(true))));
 			        while ($row = $res->fetch_array()) { 
-						$next = static::objectCMSPage($row['description'], true, true);
+						$next = static::objectCMSPage($row['description'], true, true, $obj->nodeId(true));
 						return true; 
 					}					
 		} 
