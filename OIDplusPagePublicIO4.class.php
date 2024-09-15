@@ -231,7 +231,7 @@ class OIDplusPagePublicIO4 extends OIDplusPagePluginAdmin //OIDplusPagePluginPub
 		global $oidplus_current_page_verbose;
 		//print_r($obj);die();
 		$page  = frdl_ini_dot_parse(is_string($obj) ? $obj : $obj->getDescription(), true);
-		$page['data']['id'] = is_string($obj) ? $obj : $obj->nodeId();
+		$page['data']['id'] = is_string($obj) ? null : $obj->nodeId();
 		//$data = $page['data']; 
 		// print_r($data);die();
 		
