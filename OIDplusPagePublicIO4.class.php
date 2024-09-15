@@ -1058,17 +1058,23 @@ REGEXP, $string, $matches, \PREG_PATTERN_ORDER);
  	
 		 $args = [$_SERVER['REQUEST_URI'], $request, $rel_url_original, $rel_url, $requestMethod];
 		$next = \call_user_func_array([$this, 'handleFallbackRoutes'], $args);
-		     			 
+		     /*			 
 		
-		     /*  if (0===count($_GET) && ''===$rel_url_original && $obj = OIDplusObject::findFitting('uri:/')) {
-					$next = static::objectCMSPage($obj, true, true);
-				}elseif ($obj = OIDplusObject::findFitting('uri://'.$rel_url_original)) {
-					$next = static::objectCMSPage($obj, true, true);
-				}else*/if ($obj = OIDplusObject::findFitting('uri:/'.$rel_url_original)) {
+		       if ($obj = OIDplusObject::findFitting('uri:/'.$rel_url_original)) {
 					$next = static::objectCMSPage($obj, true, true);
 				}elseif ($obj = OIDplusObject::findFitting('uri:'.$rel_url_original)) {
 					$next = static::objectCMSPage($obj, true, true);
 				}
+		*/
+			
+		$obj = OIDplusObject::parse(addslashes('uri:/'.$rel_url_original));				
+        if ($obj) {  	
+			        $res = OIDplus::db()->query("select * from ###objects where id = ?", array(addslashes($obj->nodeId(true))));
+			        while ($row = $res->fetch_array()) { 
+						$next = static::objectCMSPage($row['description'], true, true);
+						return true; 
+					}					
+		} 
 		
 		 //if(isset($_GET['test'])  )die($rel_url);
 	  if($next === false && false===$rel_url){  		 
@@ -2767,8 +2773,14 @@ REGEXP, $string, $matches, \PREG_PATTERN_ORDER);
 	 * @throws OIDplusException
 	 */
 	public function tree(array &$json, string $ra_email=null, bool $nonjs=false, string $req_goto=''): bool {
- 
- 
+           global $oidplus_admin_pages_tree_json;
+ 		
+		       $oidplus_admin_pages_tree_json = $json;		
+			  if(function_exists('did_action') && !did_action('oidplus_admin_pages_tree')){		
+				  do_action('oidplus_admin_pages_tree', $ra_email);		
+			  }			  
+			  $json = $oidplus_admin_pages_tree_json;
+		
 		if (!OIDplus::authUtils()->isAdminLoggedIn()) return false;
 /*
 
