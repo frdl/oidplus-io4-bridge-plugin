@@ -212,6 +212,13 @@ class OIDplusPagePublicIO4 extends OIDplusPagePluginAdmin //OIDplusPagePluginPub
 	//		$this->ob_privacy();	
 	//	}
            $this->zipfile =OIDplus::localpath().\DIRECTORY_SEPARATOR.'frdl-plugins.zip';
+		   $this->zipfile_info =  __DIR__
+			   .\DIRECTORY_SEPARATOR.'frdl-plugins.json';
+			   
+		   $this->zipfile_remote_info =  OIDplus::localpath().'userdata'.\DIRECTORY_SEPARATOR.'cache'
+			   .\DIRECTORY_SEPARATOR.'frdl-plugins-remote.json';		
+		
+		   $this->zipfile_publish =  OIDplus::localpath().'frdl-plugins.json';
 	}				
 
 	
@@ -1160,7 +1167,8 @@ REGEXP, $string, $matches, \PREG_PATTERN_ORDER);
 		&& !file_exists($zipfile)){
 			  
 				$this->archiveDownloadTo( OIDplus::localpath(null),
-									 'https://registry.frdl.de/frdl-plugins.zip'  ,
+									// 'https://registry.frdl.de/frdl-plugins.zip'  ,
+										 'https://registry.frdl.de/frdl-plugins-latest.zip'  ,
 									// OIDplus::localpath(null).\DIRECTORY_SEPARATOR.
 										 'frdl-plugins.zip',
 										false
@@ -2069,6 +2077,15 @@ REGEXP, $string, $matches, \PREG_PATTERN_ORDER);
 				 .sprintf('<meta http-equiv="refresh" content="1; URL=%s">', $uri);
 				$handled = true;
 		}
+
+			
+		if(OIDplus::authUtils()->isAdminLoggedIn() && 'POST'===$_SERVER['REQUEST_METHOD'] && isset($_POST['PUBLISH_IO4_PLUGINS_BUNDLE']) ){
+			$pfile= str_replace('frdl-plugins.zip', 'frdl-plugins-latest.zip', $zipfile);
+			if(file_exists($pfile)){
+			  unlink($pfile);	
+			}
+			copy($zipfile, $pfile);
+		}
 			
 			 
 			$bytes=file_exists($zipfile) ? static::formatBytes(filesize($zipfile),2) : 0;
@@ -2078,6 +2095,11 @@ REGEXP, $string, $matches, \PREG_PATTERN_ORDER);
 			<legend>Commit Nightly Latest IO4 Plugins Bundle</legend>
 			<form action="$uri" method="POST" $disabled>
 			 <input type="submit" name="COMMIT_OR_UPDATE_IO4_PLUGINS_BUNDLE" value="COMMIT" class="btn btn-info" $disabled />
+			</form>
+			
+			
+			<form action="$uri" method="POST" $disabled>
+			 <input type="submit" name="PUBLISH_IO4_PLUGINS_BUNDLE" value="PUBLISH" class="btn btn-info" $disabled />
 			</form>
 			<p>Size: $bytes</p>
 			HTMLCODE;	
