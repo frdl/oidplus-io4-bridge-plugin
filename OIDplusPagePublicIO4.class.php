@@ -226,69 +226,9 @@ class OIDplusPagePublicIO4 extends OIDplusPagePluginAdmin //OIDplusPagePluginPub
 	https://github.com/webuni/front-matter
 	*/
     public static function objectCMSPage(string | OIDplusObject $obj, ?bool $verbose = false, ?bool $die = false, ?string $id = null){
-		global $oidplus_current_object_id;
-		global $oidplus_current_page_context;
-		global $oidplus_current_page_verbose;
-		//print_r($obj);die();
-		$page  = frdl_ini_dot_parse(is_string($obj) ? $obj : $obj->getDescription(), true);
-		$page['data']['id'] = is_string($obj) ? $id : $obj->nodeId();
-		//$data = $page['data']; 
-		// print_r($data);die();
 		
-		/*
-         $frontMatter = new \Webuni\FrontMatter\FrontMatter();
-		$frontMatterExtension = new \Webuni\FrontMatter\Markdown\FrontMatterLeagueCommonMarkExtension($frontMatter);
-		$converter = new \League\CommonMark\CommonMarkConverter([
-		     'allow_unsafe_links' => true,
-		]);
-		$converter->getEnvironment()->addExtension($frontMatterExtension);
-
-		//	$converterToMarkdown = new \League\HTMLToMarkdown\HtmlConverter();
-   //     $converterToMarkdown->getConfig()->setOption('strip_tags', true);
-
-	
-		
-			 $html = $converterToMarkdown->convert($html); 
-		//$html = $converter->convert(strip_tags($html)); // html without front matter		
-		*/
-		
-		$oidplus_current_object_id = $page['data']['id'];
-		$oidplus_current_page_context = $page;
-		$oidplus_current_page_verbose= $verbose;
-			
-		$html = $page['content']; 
-		$html = \do_shortcode($html);		
-		$page['html'] = $html;
-		
-		unset($oidplus_current_object_id);
-		unset($oidplus_current_page_context);
-		unset($oidplus_current_page_verbose);
-		
-		if(true === $verbose){
-			$format = isset($_GET['format']) ? $_GET['format'] : 'cms';
-			 
-			switch($format){
-				case 'json' :
-					 header('Content-Type: application/json');
-					 echo json_encode($page, \JSON_PRETTY_PRINT);
-					break;
-				case 'cms' :
-					 $HtmlCompiler = \io4\container()->get('HtmlDocument') ;
-					 $tpl = $HtmlCompiler->compile(static::BODY_REPLACER); 
-					 $pageHTML = str_replace(static::BODY_REPLACER, $page['html'], $tpl);
-					 echo $pageHTML;
-					break;
-				case 'html' :
-				case 'body' :
-					default :
-					  echo $page['html'] ;
-					break;
-			}			
-		}
-		if(true === $die){
-			die();
-		}
-		return $page;
+		return \call_user_func_array('\Frdlweb\OIDplus\Plugins\PublicPages\WTFunctions\OIDplusPageWTFunctions::objectCMSPage',
+									 func_get_args() );
 	}
 				   
 
