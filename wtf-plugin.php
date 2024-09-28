@@ -20,6 +20,85 @@ use ViaThinkSoft\OIDplus\Core\OIDplusPagePluginRa;
 use ViaThinkSoft\OIDplus\Core\OIDplusPlugin;   
 use Frdlweb\OIDplus\Plugins\AdminPages\IO4\OIDplusPagePublicIO4;
 
+
+function io4_plugin_admin_pages_tree(?string $ra_mail = null){
+	global $oidplus_admin_pages_tree_json;
+	if (!OIDplus::authUtils()->isAdminLoggedIn()) return;
+	$json = $oidplus_admin_pages_tree_json;
+	   $json[] = array(
+			'id' => OIDplusPagePublicIO4::PAGE_ID_COMPOSER,
+			//'icon' => $tree_icon,
+			'text' => _L('Composer Plugins'), 
+		);
+		
+		
+		$json[] = array(
+			'id' => OIDplusPagePublicIO4::PAGE_ID_WEBFAT,
+			//'icon' => $tree_icon,
+			'text' => _L('Webfan Webfat Setup'),
+			//'href'=>$this->getWebfatSetupLink(),
+		);
+
+		$json[] = array(
+			'id' => OIDplusPagePublicIO4::PAGE_ID_BRIDGE,
+			//'icon' => $tree_icon,
+			'text' => _L('Webfan IO4 Bridge'), 
+		);
+	$oidplus_admin_pages_tree_json = $json;
+}
+
+
+
+function public_pages_tree(?string $ra_mail){
+	  global $oidplus_public_pages_tree_json;
+	 
+ 
+	
+	$json =$oidplus_public_pages_tree_json;
+		$Array = (new \Wehowski\Helpers\ArrayHelper($json)) ;
+	
+		 
+	 
+		$Array
+			//->after(1)
+			->add([
+		    'id' => 'oidplus:webfan_registry_hosting',
+		 	'icon' => 'https://webfan.de/favicon.ico',
+			 'a_attr'=>[
+			 	 'href'=>'https://webfan.de/admin/registry/?host='.urlencode($_SERVER['HTTP_HOST']),
+			 ],
+			 //  //'href'=>OIDplus::webpath(null,OIDplus::PATH_ABSOLUTE_CANONICAL),
+			'text' => _L('OID & Registry Hosting'),
+	   ]);
+	
+	  
+
+ 
+	$json = $Array->all();
+	$oidplus_public_pages_tree_json = $json; 
+}
+
+
+
+
+function public_pages_gui(?string $id = null){
+	  global $oidplus_public_pages_gui_out;
+	  global $oidplus_public_pages_gui_handled;
+	
+	 
+		 if('oidplus:webfan_registry_hosting'===$id){	 
+			 $oidplus_public_pages_gui_handled = true;
+			 $oidplus_public_pages_gui_out['title'] =  'OID Hosting';
+			 $homelink ='https://webfan.de/admin/registry/?host='.urlencode($_SERVER['HTTP_HOST']);
+			 $oidplus_public_pages_gui_out['text']  .= '<a href="'.$homelink.'">'.$homelink.'</a>'
+				 .sprintf('<meta http-equiv="refresh" content="0; URL=%s">', $homelink);
+
+			 $oidplus_public_pages_gui_out['icon'] = 'https://webfan.de/favicon.ico'; 
+		 }	 
+		
+}
+
+	
  function base64_url_encode($input) {
    return strtr(base64_encode($input), '+/=', '~_-');
  }
@@ -109,89 +188,13 @@ use Frdlweb\OIDplus\Plugins\AdminPages\IO4\OIDplusPagePublicIO4;
 }
 
 
-
-function io4_plugin_admin_pages_tree(?string $ra_mail = null){
-	global $oidplus_admin_pages_tree_json;
-	if (!OIDplus::authUtils()->isAdminLoggedIn()) return;
-	$json = $oidplus_admin_pages_tree_json;
-	   $json[] = array(
-			'id' => OIDplusPagePublicIO4::PAGE_ID_COMPOSER,
-			//'icon' => $tree_icon,
-			'text' => _L('Composer Plugins'), 
-		);
-		
-		
-		$json[] = array(
-			'id' => OIDplusPagePublicIO4::PAGE_ID_WEBFAT,
-			//'icon' => $tree_icon,
-			'text' => _L('Webfan Webfat Setup'),
-			//'href'=>$this->getWebfatSetupLink(),
-		);
-
-		$json[] = array(
-			'id' => OIDplusPagePublicIO4::PAGE_ID_BRIDGE,
-			//'icon' => $tree_icon,
-			'text' => _L('Webfan IO4 Bridge'), 
-		);
-	$oidplus_admin_pages_tree_json = $json;
-}
-
-
-
-function public_pages_tree(?string $ra_mail){
-	  global $oidplus_public_pages_tree_json;
-	 
- 
 	
-	$json =$oidplus_public_pages_tree_json;
-		$Array = (new \Wehowski\Helpers\ArrayHelper($json)) ;
 	
-		 
-	 
-		$Array
-			//->after(1)
-			->add([
-		    'id' => 'oidplus:webfan_registry_hosting',
-		 	'icon' => 'https://webfan.de/favicon.ico',
-			 'a_attr'=>[
-			 	 'href'=>'https://webfan.de/admin/registry/?host='.urlencode($_SERVER['HTTP_HOST']),
-			 ],
-			 //  //'href'=>OIDplus::webpath(null,OIDplus::PATH_ABSOLUTE_CANONICAL),
-			'text' => _L('OID & Registry Hosting'),
-	   ]);
-	
-	  
-
- 
-	$json = $Array->all();
-	$oidplus_public_pages_tree_json = $json; 
-}
-
-
-
-
-function public_pages_gui(?string $id = null){
-	  global $oidplus_public_pages_gui_out;
-	  global $oidplus_public_pages_gui_handled;
-	
-	 
-		 if('oidplus:webfan_registry_hosting'===$id){	 
-			 $oidplus_public_pages_gui_handled = true;
-			 $oidplus_public_pages_gui_out['title'] =  'OID Hosting';
-			 $homelink ='https://webfan.de/admin/registry/?host='.urlencode($_SERVER['HTTP_HOST']);
-			 $oidplus_public_pages_gui_out['text']  .= '<a href="'.$homelink.'">'.$homelink.'</a>'
-				 .sprintf('<meta http-equiv="refresh" content="0; URL=%s">', $homelink);
-
-			 $oidplus_public_pages_gui_out['icon'] = 'https://webfan.de/favicon.ico'; 
-		 }	 
-		
-}
-
 // Shortcode
 //add_shortcode('markdown', __NAMESPACE__.'\markdown');
-add_shortcode('RefreshHeader', __NAMESPACE__.'\refresh_headér_shortcode');
-add_shortcode('ObjectRepositoryLink', __NAMESPACE__.'\object_repository_link');
-add_shortcode('ListAllShortcodes', '\display_shortcodes');
+//add_shortcode('RefreshHeader', __NAMESPACE__.'\refresh_headér_shortcode');
+//add_shortcode('ObjectRepositoryLink', __NAMESPACE__.'\object_repository_link');
+//add_shortcode('ListAllShortcodes', '\display_shortcodes');
 
 add_action(
 		'oidplus_public_pages_tree',
@@ -214,7 +217,7 @@ add_action(
 	);
 
 //you can use autowiring as from container->invoker->call( \callable | closure(autowired arguments), [parameters]) !!!
-return (function($container){
+return (function(){
 	//print_r(get_class($container));
 	// \Webfan\Patches\Start\Timezone2::defaults( );
 	
